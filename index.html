@@ -130,8 +130,8 @@
           <textarea name="observacoes" rows="3" placeholder="Observações..."></textarea>
 
           <div class="actions">
-            <button id="btnSalvar" type="button">💾 Salvar (Planilha)</button>
-            <button id="btnWhats" type="button">📲 Enviar WhatsApp (Comprovante)</button>
+            <button id="btnSalvar" type="button">Salvar (Planilha)</button>
+            <button id="btnWhats" type="button">Enviar WhatsApp (Comprovante)</button>
             <button id="btnClear" type="button" class="btn-secondary">Limpar</button>
           </div>
         </form>
@@ -150,7 +150,7 @@
     </div>
 
     <div style="height:12px"></div>
-    <div class="muted">Obs: substitua <code>YOUR_GOOGLE_API_KEY</code> pela sua API Key no código abaixo.</div>
+    <div class="muted">Obs: substitua <code>Sheet1!A1:Z9999</code> se a sua aba/cabeçalho for diferente.</div>
   </div>
 
   <!-- libs -->
@@ -160,7 +160,7 @@
   <script>
   // CONFIG - insira sua API KEY abaixo
   const GOOGLE_CLIENT_ID = '689575420157-di4d81kgeo6tnaf70edsi6sii5523sev.apps.googleusercontent.com';
-  const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'; // <- coloque sua API key aqui
+  const GOOGLE_API_KEY = 'AIzaSyAiU6bMImfPaQLJj8nVO4V0Je67sSyvGTo';
   const SHEET_ID = '1-kcIEyUDiBWcGEUKxqotqlpyT-hIta5k3Cx1_mFEUIg';
   const SHEET_RANGE = 'Sheet1!A1:Z9999';
 
@@ -183,7 +183,7 @@
     gapi.load('client', async () => {
       try {
         await gapi.client.init({
-          apiKey: AIzaSyAiU6bMImfPaQLJj8nVO4V0Je67sSyvGTo,
+          apiKey: GOOGLE_API_KEY,
           discoveryDocs: [
             'https://sheets.googleapis.com/$discovery/rest?version=v4',
             'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
@@ -191,7 +191,6 @@
         });
         gapiInited = true;
         console.log('gapi initialized');
-        // try load meetings (will succeed only after auth for private data if needed)
         loadMeetings().catch(()=>{/*ignore*/});
       } catch (err) {
         console.error('gapi init error', err);
@@ -210,7 +209,6 @@
           alert('Erro ao autenticar: ' + resp.error);
           return;
         }
-        // get user info using access token
         fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + resp.access_token }})
           .then(r=>r.json()).then(profile => {
             userProfile = profile;
@@ -267,7 +265,6 @@
   // append to sheet (requires gapi initialized)
   async function salvarNaPlanilha(d){
     if(!gapiInited) throw new Error('APIs não inicializadas');
-    // Map columns — aqui definimos a ordem que será inserida na sua planilha
     const row = [
       d.created_at,
       d.data_contato,
@@ -295,18 +292,18 @@
     return resp;
   }
 
-  // send whatsapp: opens wa.me link with encoded message
+  // send whatsapp: opens wa.me link with encoded message (no emojis)
   function enviarWhatsapp(d, meetLink=''){
     const name = consultorNumberToName(d.consultor_number);
-    let mensagem = `📅 Novo agendamento de reunião\n`;
-    mensagem += `🏢 Empresa: ${d.empresa}\n`;
-    mensagem += `📅 Data: ${d.data_reuniao} às ${d.horario}\n`;
-    mensagem += `👤 Contato: ${d.nome} (${d.funcao})\n`;
-    mensagem += `📞 Telefone: ${d.contato}\n`;
-    mensagem += `📌 Tipo: ${d.reuniao_tipo}\n`;
-    if(meetLink) mensagem += `🔗 Meet: ${meetLink}\n`;
-    mensagem += `🏷 Segmento: ${d.segmento} — UF: ${d.uf}\n`;
-    mensagem += `📝 Obs: ${d.observacoes || '-'}\n\n`;
+    let mensagem = 'Novo agendamento de reunião\n';
+    mensagem += `Empresa: ${d.empresa}\n`;
+    mensagem += `Data: ${d.data_reuniao} às ${d.horario}\n`;
+    mensagem += `Contato: ${d.nome} (${d.funcao})\n`;
+    mensagem += `Telefone: ${d.contato}\n`;
+    mensagem += `Tipo: ${d.reuniao_tipo}\n`;
+    if(meetLink) mensagem += `Link Meet: ${meetLink}\n`;
+    mensagem += `Segmento: ${d.segmento} — UF: ${d.uf}\n`;
+    mensagem += `Observações: ${d.observacoes || '-'}\n\n`;
     mensagem += `Enviado por: ${d.agendado_por}`;
 
     const numero = d.consultor_number.replace(/\D/g,'');
@@ -341,9 +338,6 @@
 
   btnWhats.addEventListener('click', async () => {
     const dados = coletarDadosFormulario();
-    // opcional: se quiser garantir que já foi salvo antes de enviar, descomente:
-    // await salvarNaPlanilha(dados);
-    // se quiser criar meet antes de enviar (quando tipo=Meet), poderíamos chamar createCalendarEvent...
     enviarWhatsapp(dados, '');
   });
 
@@ -362,7 +356,6 @@
         header.forEach((h,i)=> obj[h] = r[i] || '');
         return obj;
       });
-      // show 10 most recent
       meetingsListEl.innerHTML = '';
       data.slice(-10).reverse().forEach(row => {
         const d = document.createElement('div');
@@ -379,7 +372,6 @@
 
   // init on load
   window.onload = () => {
-    // wait for gapi library to be available
     const waitGapi = setInterval(() => {
       if(window.gapi && window.google){
         clearInterval(waitGapi);
@@ -388,7 +380,6 @@
       }
     }, 300);
   };
-
   </script>
 </body>
 </html>
