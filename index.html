@@ -23,9 +23,13 @@
     .row > *{flex:1}
     .actions { display:flex; gap:8px; margin-top:12px; }
     .btn-secondary { background:#eee; color:#111; }
-    .meeting-item { border-bottom:1px solid #e6e9ef; padding:10px 0; }
-    .meeting-header { display:flex; justify-content: space-between; align-items: center; cursor:pointer; }
-    .meeting-details { margin-top: 8px; display:none; background:#f9fbff; padding:8px; border-radius:8px; font-size:14px; color:#222; }
+    .meeting-item { border-bottom: 1px solid #eee; padding: 8px 0; }
+    .meeting-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .meeting-header strong { flex-grow: 1; }
+    .meeting-header .muted { font-size: 13px; color: var(--muted); }
+    .meeting-header button { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 5px 10px; cursor: pointer; flex-shrink: 0; }
+    .meeting-details { padding: 8px 12px; background: #f9fbff; border-radius: 8px; margin-top: 6px; display: none; font-size: 14px; }
+    .meeting-details p { margin: 4px 0; }
   </style>
 </head>
 <body>
@@ -145,7 +149,7 @@
         <div class="card">
           <div><div class="small">Painel</div><strong id="panelTitle">Visão</strong></div>
           <div style="margin-top:12px" id="panelsContent">
-            <div class="small">Reuniões do dia</div>
+            <div class="small">Reuniões recentes</div>
             <div id="meetingsList" style="margin-top:10px"></div>
           </div>
         </div>
@@ -333,6 +337,7 @@
       await salvarNaPlanilha(dados);
       alert('Salvo na planilha com sucesso.');
       loadMeetings().catch(()=>{/*ignore*/});
+      document.getElementById('formAgendamento').reset();
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar — veja console.');
@@ -346,51 +351,44 @@
 
   btnClear.addEventListener('click', () => document.getElementById('formAgendamento').reset());
 
-  // Load meetings (read sheet) to show meetings of today in order with expand button
+  // Função para normalizar o header da planilha em chaves JS amigáveis
+  function normalizeHeader(header){
+    return header.toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  // Load meetings (read sheet) to show recent in panel
   async function loadMeetings(){
     if(!gapiInited) return;
     try {
       const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: SHEET_RANGE });
       const rows = res.result.values || [];
-      if(rows.length < 2){ 
-        meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião registrada</div>'; 
-        return; 
+      if(rows.length < 2){
+        meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião registrada</div>';
+        return;
       }
-      const header = rows[0];
+      const headerRaw = rows[0];
+      const header = headerRaw.map(normalizeHeader);
+
       const data = rows.slice(1).map(r => {
         const obj = {};
-        header.forEach((h,i)=> obj[h] = r[i] || '');
+        header.forEach((h,i) => obj[h] = r[i] || '');
         return obj;
       });
 
-      // Formato esperado das colunas no header:
-      // 0: created_at
-      // 1: data_contato
-      // 2: empresa
-      // 3: cnpj
-      // 4: qtd_lojas
-      // 5: segmento
-      // 6: uf
-      // 7: prospeccao
-      // 8: nome
-      // 9: funcao
-      // 10: contato
-      // 11: reuniao_tipo
-      // 12: data_reuniao (yyyy-mm-dd)
-      // 13: horario (HH:MM)
-      // 14: consultor (nome)
-      // 15: consultor_number
-      // 16: meet link (ainda vazio)
-      // 17: observacoes
-      // 18: agendado_por
+      // filtrar só reuniões de hoje
+      const hojeStr = new Date().toISOString().slice(0,10);
 
-      // filtrar só reuniões de hoje (com data_reuniao igual a hoje)
-      const hoje = new Date();
-      const hojeStr = hoje.toISOString().slice(0,10); // yyyy-mm-dd
+      const reunioesHoje = data.filter(row => row['data_da_reuniao'] === hojeStr);
 
-      const reunioesHoje = data.filter(row => {
-        // pode vir no formato yyyy-mm-dd, vamos comparar exato
-        return row['data_reuniao'] === hojeStr;
+      // ordenar por horário
+      reunioesHoje.sort((a,b) => {
+        if(a['horario'] < b['horario']) return -1;
+        if(a['horario'] > b['horario']) return 1;
+        return 0;
       });
 
       if(reunioesHoje.length === 0){
@@ -398,69 +396,54 @@
         return;
       }
 
-      // ordenar por horário (coluna 'horario')
-      reunioesHoje.sort((a,b) => {
-        if(a['horario'] < b['horario']) return -1;
-        if(a['horario'] > b['horario']) return 1;
-        return 0;
-      });
-
       meetingsListEl.innerHTML = '';
-      reunioesHoje.forEach((row, idx) => {
-        const d = document.createElement('div');
-        d.className = 'meeting-item';
 
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'meeting-header';
+      reunioesHoje.forEach((row, index) => {
+        const div = document.createElement('div');
+        div.className = 'meeting-item';
 
-        const title = document.createElement('strong');
-        title.textContent = row['empresa'];
+        const consultorNome = consultorNumberToName(row['numero_do_consultor']);
 
-        const infoSpan = document.createElement('span');
-        infoSpan.className = 'muted';
-        infoSpan.textContent = `${row['data_reuniao']} às ${row['horario']} — ${row['consultor']}`;
-
-        const btnAbrir = document.createElement('button');
-        btnAbrir.textContent = 'Abrir informações';
-        btnAbrir.style.marginLeft = '10px';
-        btnAbrir.style.flexShrink = '0';
-
-        headerDiv.appendChild(title);
-        headerDiv.appendChild(infoSpan);
-        headerDiv.appendChild(btnAbrir);
-
-        // detalhes escondidos
-        const detalhes = document.createElement('div');
-        detalhes.className = 'meeting-details';
-
-        let detalhesHTML = `
-          <p><strong>CNPJ:</strong> ${row['cnpj']}</p>
-          <p><strong>Quantidade de lojas:</strong> ${row['qtd_lojas']}</p>
-          <p><strong>Segmento:</strong> ${row['segmento']}</p>
-          <p><strong>UF:</strong> ${row['uf']}</p>
-          <p><strong>Prospecção:</strong> ${row['prospeccao']}</p>
-          <p><strong>Contato:</strong> ${row['nome']} — ${row['funcao']}</p>
-          <p><strong>Telefone:</strong> ${row['contato']}</p>
-          <p><strong>Tipo de Reunião:</strong> ${row['reuniao_tipo']}</p>
-          <p><strong>Observações:</strong> ${row['observacoes'] || '-'}</p>
-          <p><strong>Agendado por:</strong> ${row['agendado_por']}</p>
+        div.innerHTML = `
+          <div class="meeting-header">
+            <strong>${row['nome_da_empresa'] || '-'}</strong>
+            <div class="muted">${row['horario']} — ${consultorNome}</div>
+            <button type="button" aria-expanded="false" aria-controls="details-${index}">Abrir informações</button>
+          </div>
+          <div class="meeting-details" id="details-${index}">
+            <p><strong>CNPJ:</strong> ${row['cnpj'] || '-'}</p>
+            <p><strong>Quantidade de lojas:</strong> ${row['quantidade_de_lojas'] || '-'}</p>
+            <p><strong>Segmento:</strong> ${row['segmento'] || '-'}</p>
+            <p><strong>UF:</strong> ${row['uf'] || '-'}</p>
+            <p><strong>Prospecção:</strong> ${row['prospeccao'] || '-'}</p>
+            <p><strong>Nome do contato:</strong> ${row['nome'] || '-'}</p>
+            <p><strong>Função:</strong> ${row['funcao'] || '-'}</p>
+            <p><strong>Contato:</strong> ${row['contato'] || '-'}</p>
+            <p><strong>Tipo de reunião:</strong> ${row['reuniao'] || '-'}</p>
+            <p><strong>Data da reunião:</strong> ${row['data_da_reuniao'] || '-'}</p>
+            <p><strong>Horário:</strong> ${row['horario'] || '-'}</p>
+            <p><strong>Consultor:</strong> ${consultorNome}</p>
+            <p><strong>Observações:</strong> ${row['observacao'] || '-'}</p>
+            <p><strong>Email de quem mandou:</strong> ${row['email_de_quem_mandou'] || '-'}</p>
+          </div>
         `;
-        detalhes.innerHTML = detalhesHTML;
 
-        btnAbrir.addEventListener('click', () => {
-          if(detalhes.style.display === 'none' || detalhes.style.display === ''){
-            detalhes.style.display = 'block';
-            btnAbrir.textContent = 'Fechar informações';
+        // botão para abrir/fechar detalhes
+        const btn = div.querySelector('button');
+        const details = div.querySelector('.meeting-details');
+        btn.addEventListener('click', () => {
+          const expanded = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', String(!expanded));
+          if(expanded){
+            details.style.display = 'none';
+            btn.textContent = 'Abrir informações';
           } else {
-            detalhes.style.display = 'none';
-            btnAbrir.textContent = 'Abrir informações';
+            details.style.display = 'block';
+            btn.textContent = 'Fechar informações';
           }
         });
 
-        d.appendChild(headerDiv);
-        d.appendChild(detalhes);
-
-        meetingsListEl.appendChild(d);
+        meetingsListEl.appendChild(div);
       });
 
     } catch (err) {
