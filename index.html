@@ -1,1 +1,512 @@
-gteahg
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reuniões SouFácil</title>
+  <style>
+    :root{--accent:#007aff;--muted:#6b7280}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial; background:#f3f6fb; margin:0; padding:24px; display:flex; justify-content:center}
+    .app{width:1100px; max-width:96%; background:linear-gradient(180deg,#fff,#fbfdff); border-radius:14px; box-shadow:0 10px 30px rgba(18,38,63,0.08); padding:20px;}
+    header{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px}
+    .brand{display:flex; gap:12px; align-items:center}
+    .logo{width:48px;height:48px;background:linear-gradient(135deg,#007aff,#4cc3ff); border-radius:12px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{font-size:18px;margin:0}
+    .small{color:var(--muted);font-size:13px}
+    .cols{display:grid; grid-template-columns:420px 1fr; gap:16px}
+    .card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(15,30,60,0.04)}
+    label{display:block;font-size:13px;color:#333;margin-top:10px}
+    input,select,textarea{width:100%;padding:10px;border:1px solid #e6e9ef;border-radius:8px;margin-top:6px;font-size:14px}
+    button{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+    .muted{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:8px}
+    .row > *{flex:1}
+    .list-item{padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.04);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">SF</div>
+        <div>
+          <h1>Reuniões — SouFácil</h1>
+          <div class="small">Autentique com Google para continuar</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:center">
+        <div id="userEmail" class="muted">Não conectado</div>
+        <button id="btnSignIn">Entrar com Google</button>
+        <button id="btnSignOut" style="display:none;background:#eee;color:#111">Sair</button>
+      </div>
+    </header>
+
+    <div class="cols">
+      <!-- Left: Form (Angela) -->
+      <div class="card" id="panelForm">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <div>
+            <div class="small">Formulário de agendamento</div>
+            <strong>Angela</strong>
+          </div>
+          <div class="small" id="statusApi">API: desconectada</div>
+        </div>
+
+        <form id="formAgendamento" style="margin-top:12px">
+          <label>Data do contato</label>
+          <input type="date" name="data_contato" required>
+
+          <label>Nome da empresa</label>
+          <input type="text" name="empresa" required>
+
+          <label>CNPJ</label>
+          <input type="text" name="cnpj" placeholder="00.000.000/0000-00">
+
+          <label>Quantidade de lojas</label>
+          <input type="number" name="qtd_lojas" min="0">
+
+          <label>Segmento</label>
+          <select name="segmento" required>
+            <option value="">Selecione</option>
+            <option>Móveis</option><option>Óticas</option><option>Roupas</option><option>Calçados</option>
+            <option>Celular</option><option>Mercado</option><option>Farmácia</option><option>Eletro</option>
+            <option>Utilidades</option><option>Distribuidora</option><option>Clínica</option><option>Conveniência</option>
+          </select>
+
+          <label>UF</label>
+          <select name="uf" required>
+            <option value="">Selecione</option>
+            <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+            <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+            <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
+            <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+            <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
+            <option>SP</option><option>TO</option>
+          </select>
+
+          <label>Prospecção</label>
+          <select name="prospeccao" required>
+            <option value="">Selecione</option>
+            <option>Leads</option><option>Internet</option><option>Indicação</option><option>Ligação</option><option>Visita</option><option>Já é cliente</option>
+          </select>
+
+          <label>Nome</label>
+          <input type="text" name="nome" required>
+
+          <label>Função</label>
+          <select name="funcao" required>
+            <option value="">Selecione</option>
+            <option>Funcionário</option><option>Vendedor</option><option>Proprietário</option><option>Gerente</option><option>Financeiro</option>
+          </select>
+
+          <label>Contato</label>
+          <input type="tel" name="contato" placeholder="+55 (DDD) 90000-0000" required>
+
+          <label>Reunião</label>
+          <select name="reuniao" id="tipoReuniao" required>
+            <option value="">Selecione</option>
+            <option value="Ligação">Ligação</option>
+            <option value="Whats">Whats</option>
+            <option value="Meet">Meet</option>
+          </select>
+
+          <div class="row">
+            <div>
+              <label>Data da Reunião</label>
+              <input type="date" name="data_reuniao" required>
+            </div>
+            <div>
+              <label>Horário</label>
+              <input type="time" name="horario" required>
+            </div>
+          </div>
+
+          <label>Consultor</label>
+          <select name="consultor" required>
+            <option value="">Selecione</option>
+            <option value="5517992741145">Glaucia — +55 17 99274-1145</option>
+            <option value="5517992021249">Leticia — +55 17 99202-1249</option>
+            <option value="5517992724400">Marcelo — +55 17 99272-4400</option>
+            <option value="5517992739551">Gabriel — +55 17 99273-9551</option>
+          </select>
+
+          <label>Observações / Devolutiva inicial</label>
+          <textarea name="observacoes" rows="3" placeholder="Observações..."></textarea>
+
+          <div style="margin-top:12px; display:flex; gap:8px">
+            <button type="submit">Agendar e Enviar WhatsApp</button>
+            <button id="btnClear" type="button" style="background:#eee;color:#111">Limpar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right: Painéis -->
+      <div>
+        <div class="card" id="panelDashboard">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><div class="small">Painel</div><strong id="panelTitle">Visão pública</strong></div>
+            <div class="small">Conectado: <span id="apiStatus">não</span></div>
+          </div>
+
+          <div style="margin-top:12px" id="panelsContent">
+            <div class="small">Reuniões recentes</div>
+            <div id="meetingsList" style="margin-top:10px"></div>
+          </div>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div class="card" id="panelActions" style="display:none">
+          <div class="small">Ações do consultor</div>
+          <div id="consultorActions" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:12px"></div>
+    <div class="muted">Observação: não inclua o Client Secret em arquivos públicos.</div>
+  </div>
+
+  <!-- Google JS libs -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+
+  <script>
+  // ========== CONFIG ==========
+  const GOOGLE_CLIENT_ID = '689575420157-di4d81kgeo6tnaf70edsi6sii5523sev.apps.googleusercontent.com'; // seu Client ID (já inserido)
+  const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'; // <--- substitua pela sua API KEY
+  const SHEET_ID = '1-kcIEyUDiBWcGEUKxqotqlpyT-hIta5k3Cx1_mFEUIg'; // sua planilha
+  const SHEET_RANGE = 'Sheet1!A1:Z9999'; // ajuste se a aba tiver outro nome
+  // ============================
+
+  // listas de permissões por e-mail
+  const EMAILS = {
+    angela: ['angelagouveia70@gmail.com'],
+    consultores: [
+      'glauciacomercial231@gmail.com',
+      'marcelocomercialsoufacil@gmail.com',
+      'leticiasoufacil@gmail.com',
+      'gabrieldsoufacil@gmail.com'
+    ],
+    gerentes: [
+      'felipesoufacil@gmail.com',
+      'gerentecomercialsoufacil@gmail.com'
+    ]
+  };
+
+  // estado local
+  let tokenClient;
+  let gapiInited = false;
+  let userProfile = null;
+  let meetings = []; // cache lido da planilha
+
+  // DOM
+  const btnSignIn = document.getElementById('btnSignIn');
+  const btnSignOut = document.getElementById('btnSignOut');
+  const userEmailEl = document.getElementById('userEmail');
+  const statusApiEl = document.getElementById('statusApi');
+  const apiStatus = document.getElementById('apiStatus');
+  const panelTitle = document.getElementById('panelTitle');
+  const meetingsListEl = document.getElementById('meetingsList');
+  const panelActions = document.getElementById('panelActions');
+  const consultorActions = document.getElementById('consultorActions');
+
+  // carrega gapi e init
+  function loadGapi(){
+    gapi.load('client', async () => {
+      try {
+        await gapi.client.init({
+          apiKey: GOOGLE_API_KEY,
+          discoveryDocs: [
+            'https://sheets.googleapis.com/$discovery/rest?version=v4',
+            'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
+          ]
+        });
+        gapiInited = true;
+        apiStatus.textContent = 'sim';
+        statusApiEl.textContent = 'ok';
+        console.log('gapi ready');
+      } catch(err) {
+        console.error('gapi init error', err);
+        statusApiEl.textContent = 'erro';
+      }
+    });
+  }
+  // init token client (one-tap / popup token)
+  function initTokenClient(){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events openid email profile',
+      callback: (resp) => {
+        if (resp.error) {
+          console.error('token error', resp);
+          return;
+        }
+        // token recebido, agora pegamos perfil com id_token
+        google.accounts.oauth2.getTokenStatus && console.log('token ok');
+        // fetch profile (we'll use the ID token to decode email)
+        // simpler: use google.accounts.id to get basic profile on sign-in flow, but here we'll request userinfo
+        fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + resp.access_token }})
+          .then(r => r.json())
+          .then(profile => {
+            userProfile = profile;
+            afterSignIn();
+            // load meetings on sign in
+            loadMeetings();
+          }).catch(e => console.error('userinfo err', e));
+      }
+    });
+  }
+
+  // sign in flow: request access token interactively
+  btnSignIn.addEventListener('click', async () => {
+    if (!tokenClient) initTokenClient();
+    tokenClient.requestAccessToken({prompt: 'consent'});
+  });
+
+  btnSignOut.addEventListener('click', () => {
+    userProfile = null;
+    userEmailEl.textContent = 'Não conectado';
+    btnSignOut.style.display = 'none';
+    btnSignIn.style.display = 'inline-block';
+    panelActions.style.display = 'none';
+    panelTitle.textContent = 'Visão pública';
+    meetingsListEl.innerHTML = '';
+  });
+
+  // após autenticação: define função por e-mail
+  function afterSignIn(){
+    if(!userProfile) return;
+    const email = userProfile.email;
+    userEmailEl.textContent = email;
+    btnSignOut.style.display = 'inline-block';
+    btnSignIn.style.display = 'none';
+
+    const role = getRoleByEmail(email);
+    panelTitle.textContent = roleToTitle(role);
+    if(role === 'consultor') panelActions.style.display = 'block';
+    else panelActions.style.display = 'none';
+  }
+
+  function getRoleByEmail(email){
+    if(EMAILS.angela.includes(email)) return 'angela';
+    if(EMAILS.consultores.includes(email)) return 'consultor';
+    if(EMAILS.gerentes.includes(email)) return 'gerente';
+    return 'visitante';
+  }
+  function roleToTitle(role){
+    if(role==='angela') return 'Painel de Agendamento (Angela)';
+    if(role==='consultor') return 'Painel do Consultor';
+    if(role==='gerente') return 'Painel do Gestor';
+    return 'Visão pública';
+  }
+
+  // === Form submit handler ===
+  document.getElementById('formAgendamento').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if(!userProfile){ alert('Faça login com Google antes'); return; }
+
+    const fd = new FormData(e.target);
+    const data = {
+      data_contato: fd.get('data_contato') || '',
+      empresa: fd.get('empresa') || '',
+      cnpj: fd.get('cnpj') || '',
+      qtd_lojas: fd.get('qtd_lojas') || '',
+      segmento: fd.get('segmento') || '',
+      uf: fd.get('uf') || '',
+      prospeccao: fd.get('prospeccao') || '',
+      nome: fd.get('nome') || '',
+      funcao: fd.get('funcao') || '',
+      contato: fd.get('contato') || '',
+      reuniao_tipo: fd.get('reuniao') || '',
+      data_reuniao: fd.get('data_reuniao') || '',
+      horario: fd.get('horario') || '',
+      consultor_number: fd.get('consultor') || '',
+      observacoes: fd.get('observacoes') || '',
+      agendado_por: userProfile.email,
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      // 1) se Meet -> criar evento no Calendar e pegar meet link
+      let meetLink = '';
+      if (data.reuniao_tipo === 'Meet') {
+        meetLink = await createCalendarEventAndGetMeetLink(data);
+      }
+
+      // 2) salvar na sheet
+      await appendRowToSheet([
+        data.created_at,
+        data.data_contato,
+        data.empresa,
+        data.cnpj,
+        data.qtd_lojas,
+        data.segmento,
+        data.uf,
+        data.prospeccao,
+        data.nome,
+        data.funcao,
+        data.contato,
+        data.reuniao_tipo,
+        data.data_reuniao,
+        data.horario,
+        consultorNumberToName(data.consultor_number),
+        data.consultor_number,
+        meetLink,
+        data.observacoes,
+        data.agendado_por
+      ]);
+
+      // 3) enviar whatsapp (abre nova aba)
+      const message = buildWhatsappMessage(data, meetLink);
+      const waUrl = `https://wa.me/${data.consultor_number}?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, '_blank');
+
+      alert('Agendamento criado e mensagem aberta no WhatsApp.');
+      e.target.reset();
+      await loadMeetings();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao agendar. Veja o console do navegador.');
+    }
+  });
+
+  // helper: nome do consultor por número
+  function consultorNumberToName(num){
+    const map = {
+      '5517992741145':'Glaucia',
+      '5517992021249':'Leticia',
+      '5517992724400':'Marcelo',
+      '5517992739551':'Gabriel'
+    };
+    return map[num] || num;
+  }
+
+  // monta a mensagem enviada ao consultor
+  function buildWhatsappMessage(data, meetLink){
+    let text = '📅 Novo agendamento de reunião%0A';
+    text += `🏢 Empresa: ${data.empresa}%0A`;
+    text += `📅 Data: ${data.data_reuniao} às ${data.horario}%0A`;
+    text += `👤 Contato: ${data.nome} (${data.funcao})%0A`;
+    text += `📞 Telefone: ${data.contato}%0A`;
+    text += `📌 Tipo: ${data.reuniao_tipo}%0A`;
+    if(meetLink) text += `🔗 Meet: ${meetLink}%0A`;
+    text += `🏷 Segmento: ${data.segmento} — UF: ${data.uf}%0A`;
+    text += `📝 Observações: ${data.observacoes || '-'}%0A`;
+    text += `%0A Enviado por: ${data.agendado_por}`;
+    return decodeURIComponent(text); // wa.me supports encoded text but we'll open with encodeURIComponent outside
+  }
+
+  // === Sheets: append row ===
+  async function appendRowToSheet(values){
+    if(!gapiInited) throw new Error('gapi não inicializado');
+    const params = {
+      spreadsheetId: SHEET_ID,
+      range: SHEET_RANGE,
+      valueInputOption: 'RAW'
+    };
+    const resource = { values: [values] };
+    const res = await gapi.client.sheets.spreadsheets.values.append(params, resource);
+    return res;
+  }
+
+  // === Calendar: create event with Meet link ===
+  async function createCalendarEventAndGetMeetLink(data){
+    if(!gapiInited) throw new Error('gapi não inicializado');
+    // build start/end in RFC3339 using local date/time (assumes user local tz)
+    const start = new Date(`${data.data_reuniao}T${data.horario}`);
+    const end = new Date(start.getTime() + 30*60000); // 30 min default
+    const event = {
+      summary: `Reunião - ${data.empresa}`,
+      description: `Contato: ${data.nome} - ${data.funcao}\\nAgendado por: ${data.agendado_por}\\nObs: ${data.observacoes}`,
+      start: { dateTime: start.toISOString() },
+      end: { dateTime: end.toISOString() },
+      attendees: [{email: userProfile.email}], // optional
+      conferenceData: {
+        createRequest: {
+          requestId: `meet-${Math.random().toString(36).slice(2,9)}`,
+          conferenceSolutionKey: { type: "hangoutsMeet" }
+        }
+      }
+    };
+    // Need to call with conferenceDataVersion=1 and proper scope
+    const request = gapi.client.calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+      conferenceDataVersion: 1
+    });
+    const resp = await request;
+    // Meet link path: resp.result.conferenceData.entryPoints[0].uri (or use hangoutLink)
+    const conf = resp.result.conferenceData;
+    let link = '';
+    if(conf && conf.entryPoints && conf.entryPoints.length) link = conf.entryPoints[0].uri;
+    if(!link && resp.result.hangoutLink) link = resp.result.hangoutLink;
+    return link;
+  }
+
+  // === Load meetings from sheet (simple read) ===
+  async function loadMeetings(){
+    if(!gapiInited) return;
+    try {
+      const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: SHEET_RANGE
+      });
+      const rows = res.result.values || [];
+      if(rows.length < 2){ meetings = []; renderMeetings([]); return; }
+      const header = rows[0];
+      const data = rows.slice(1).map(r => {
+        const obj = {};
+        header.forEach((h,i)=> obj[h] = r[i] || '');
+        return obj;
+      });
+      meetings = data.reverse().slice(0,30); // most recent 30
+      renderMeetings(meetings);
+    } catch(err) {
+      console.error('loadMeetings err', err);
+    }
+  }
+
+  function renderMeetings(list){
+    meetingsListEl.innerHTML = '';
+    if(!list.length){ meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião registrada</div>'; return; }
+    const role = userProfile ? getRoleByEmail(userProfile.email) : 'visitante';
+    list.forEach((m, idx) => {
+      const div = document.createElement('div');
+      div.className = 'list-item';
+      const left = document.createElement('div');
+      left.innerHTML = `<div style="font-weight:600">${m['Empresa'] || m['empresa'] || m['Empresa / Cliente'] || ''} — ${m['Consultor'] || m['consultor'] || ''}</div>
+                        <div class="muted">${m['Data da Reunião'] || m['data_reuniao'] || m['Data'] || ''} ${m['Horário'] || m['horario'] || ''}</div>`;
+      const right = document.createElement('div');
+      if(role === 'consultor' && EMAILS.consultores.includes(userProfile.email)){
+        const btnDone = document.createElement('button');
+        btnDone.textContent = 'Marcar feita';
+        btnDone.onclick = () => markAsDoneInSheet(m);
+        right.appendChild(btnDone);
+      } else {
+        right.innerHTML = `<div class="small">${(m['Status'] || m['status'] || '')}</div>`;
+      }
+      div.appendChild(left); div.appendChild(right);
+      meetingsListEl.appendChild(div);
+    });
+  }
+
+  // mark as done -> simple flow: append a new column with status (this is a quick approach)
+  async function markAsDoneInSheet(rowObj){
+    alert('Para marcar como feita, abra a planilha e atualize a linha (implementação simples por enquanto).');
+    // For a production flow we should store row index in the sheet and update that specific row using update API.
+  }
+
+  // init
+  window.onload = () => {
+    loadGapi();
+    // init tokenclient when GSI lib loaded
+    setTimeout(() => { initTokenClient(); }, 1000);
+  };
+
+  // clear button
+  document.getElementById('btnClear').addEventListener('click', () => document.getElementById('formAgendamento').reset());
+  </script>
+</body>
+</html>
