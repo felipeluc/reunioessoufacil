@@ -3,720 +3,651 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Reuniões SouFácil - Sistema</title>
+<title>Controle de Reuniões - SouFacil</title>
 <style>
-  :root {--accent:#007aff;--muted:#6b7280}
-  body {font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial; background:#f3f6fb; margin:0; padding:24px; display:flex; justify-content:center;}
-  .app {width:1100px; max-width:96%; background:linear-gradient(180deg,#fff,#fbfdff); border-radius:14px; box-shadow:0 10px 30px rgba(18,38,63,0.08); padding:20px;}
-  header {display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
-  .brand {display:flex; gap:12px; align-items:center;}
-  .logo {width:48px; height:48px; background:linear-gradient(135deg,#007aff,#4cc3ff); border-radius:12px; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700;}
-  h1 {font-size:18px; margin:0;}
-  .small {color:var(--muted); font-size:13px;}
-  select,input,textarea,button {font-size:14px; border-radius:8px;}
-  label {display:block; font-size:13px; color:#333; margin-top:10px;}
-  input,select,textarea {width:100%; padding:10px; border:1px solid #e6e9ef; margin-top:6px;}
-  button {background:var(--accent); color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;}
-  .btn-secondary {background:#eee; color:#111;}
-  .card {background:#fff; border-radius:12px; padding:14px; box-shadow:0 6px 18px rgba(15,30,60,0.04); margin-bottom: 20px;}
-  .muted {color:var(--muted); font-size:13px;}
-  .meeting-item {border-bottom: 1px solid #eee; padding: 8px 0;}
-  .meeting-header {display: flex; align-items: center; gap: 12px; flex-wrap: wrap;}
-  .meeting-header strong {flex-grow: 1;}
-  .meeting-header .muted {font-size: 13px; color: var(--muted);}
-  .meeting-header button {background: var(--accent); color: white; border: none; border-radius: 8px; padding: 5px 10px; cursor: pointer; flex-shrink: 0;}
-  .meeting-details {padding: 8px 12px; background: #f9fbff; border-radius: 8px; margin-top: 6px; display: none; font-size: 14px;}
-  .meeting-details p {margin: 4px 0;}
-  #selectUser, #filterMonth {margin-bottom: 12px;}
-  .actions {display: flex; gap: 6px; margin-top: 8px;}
-  .actions button {padding: 5px 10px; font-size: 13px;}
-  .hidden {display:none;}
-  .error {color: red; margin-top: 10px;}
+  body { font-family: Arial, sans-serif; padding: 10px; background: #f9f9f9; }
+  h1,h2,h3 { margin-bottom: 0.3em; }
+  .hidden { display:none; }
+  button { cursor:pointer; margin: 2px; }
+  select, input, textarea { padding:5px; margin: 5px 0; width: 100%; max-width: 300px; }
+  label { font-weight: bold; display: block; margin-top: 10px; }
+  .meeting-item { border: 1px solid #ccc; background: #fff; margin-bottom: 10px; padding: 10px; border-radius: 6px; }
+  .meeting-header { display: flex; justify-content: space-between; align-items: center; }
+  .meeting-header strong { font-size: 1.1em; }
+  .meeting-details { margin-top: 10px; display:none; }
+  .muted { color: #777; font-size: 0.9em; }
+  .actions button { margin-right: 5px; }
+  #modalEdit { 
+    position: fixed; top: 0; left: 0; right:0; bottom:0; background: rgba(0,0,0,0.6); 
+    display:flex; align-items:center; justify-content:center; 
+  }
+  #modalEdit .content { background:#fff; padding:20px; border-radius:8px; width: 90%; max-width: 400px; }
+  #modalEdit.hidden { display:none; }
+  .cards-container { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
+  .card { background: #fff; padding: 15px; border-radius: 6px; box-shadow: 0 0 5px #ccc; flex: 1 1 200px; }
+  .filters { margin-top: 15px; margin-bottom: 15px; }
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body>
-<div class="app">
-  <header>
-    <div class="brand">
-      <div class="logo">SF</div>
-      <div>
-        <h1>Reuniões SouFácil - Sistema</h1>
-        <div class="small" id="userEmail">Não conectado</div>
-      </div>
-    </div>
-    <div style="display:flex; gap:10px; align-items:center;">
-      <select id="selectUser" class="hidden" title="Selecionar tela para visualização"></select>
-      <button id="btnSignIn">Entrar com Google</button>
-      <button id="btnSignOut" class="btn-secondary hidden">Sair</button>
-    </div>
-  </header>
 
-  <!-- Área para formulário Angela -->
-  <div id="formAngela" class="card hidden">
-    <div><div class="small">Formulário de agendamento — Angela</div></div>
-    <form id="formAgendamento" style="margin-top:12px">
-      <label>Data do contato</label><input type="date" name="data_contato" required>
-      <label>Nome da empresa</label><input type="text" name="empresa" required>
-      <label>CNPJ</label><input type="text" name="cnpj" placeholder="00.000.000/0000-00">
-      <label>Quantidade de lojas</label><input type="number" name="qtd_lojas" min="0">
-      <label>Segmento</label>
-      <select name="segmento" required>
-        <option value="">Selecione</option>
-        <option>Móveis</option><option>Óticas</option><option>Roupas</option><option>Calçados</option>
-        <option>Celular</option><option>Mercado</option><option>Farmácia</option><option>Eletro</option>
-        <option>Utilidades</option><option>Distribuidora</option><option>Clínica</option><option>Conveniência</option>
-      </select>
-      <label>UF</label>
-      <select name="uf" required>
-        <option value="">Selecione</option>
-        <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
-        <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
-        <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
-        <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
-        <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
-        <option>SP</option><option>TO</option>
-      </select>
-      <label>Prospecção</label>
-      <select name="prospeccao" required>
-        <option value="">Selecione</option>
-        <option>Leads</option><option>Internet</option><option>Indicação</option><option>Ligação</option><option>Visita</option><option>Já é cliente</option>
-      </select>
-      <label>Nome</label><input type="text" name="nome" required>
-      <label>Função</label>
-      <select name="funcao" required>
-        <option value="">Selecione</option>
-        <option>Funcionário</option><option>Vendedor</option><option>Proprietário</option><option>Gerente</option><option>Financeiro</option>
-      </select>
-      <label>Contato</label><input type="tel" name="contato" placeholder="+55 (DDD) 90000-0000" required>
-      <label>Reunião</label>
-      <select name="reuniao" id="tipoReuniao" required>
-        <option value="">Selecione</option>
-        <option value="Ligação">Ligação</option>
-        <option value="Whats">Whats</option>
-        <option value="Meet">Meet</option>
-      </select>
-      <div style="display:flex; gap:10px;">
-        <div style="flex:1;">
-          <label>Data da Reunião</label><input type="date" name="data_reuniao" required>
-        </div>
-        <div style="flex:1;">
-          <label>Horário</label><input type="time" name="horario" required>
-        </div>
-      </div>
-      <label>Consultor</label>
-      <select name="consultor" id="consultorSelect" required>
-        <option value="">Selecione</option>
-        <option value="Glaucia">Glaucia — +55 17 99274-1145</option>
-        <option value="Leticia">Leticia — +55 17 99202-1249</option>
-        <option value="Marcelo">Marcelo — +55 17 99272-4400</option>
-        <option value="Gabriel">Gabriel — +55 17 99273-9551</option>
-      </select>
-      <label>Observações</label><textarea name="observacoes" rows="3" placeholder="Observações..."></textarea>
+<h1>Controle de Reuniões - SouFacil</h1>
 
-      <div class="actions" style="margin-top:10px;">
-        <button id="btnSalvar" type="button">Salvar (Planilha)</button>
-        <button id="btnWhats" type="button">Enviar WhatsApp (Comprovante)</button>
-        <button id="btnClear" type="button" class="btn-secondary">Limpar</button>
-      </div>
-    </form>
+<div>
+  <button id="btnSignIn">Login Google</button>
+  <button id="btnSignOut" class="hidden">Logout</button>
+  <span id="userEmail">Não conectado</span>
+</div>
+
+<hr/>
+
+<!-- Select para Admin escolher tela -->
+<div id="selectUserContainer" class="hidden">
+  <label for="selectUser">Escolha a tela:</label>
+  <select id="selectUser">
+    <option value="">Selecione</option>
+    <option value="angela">Angela (Agendamento)</option>
+    <!-- Consultores dinâmicos via JS -->
+  </select>
+</div>
+
+<!-- Tela Angela -->
+<div id="formAngela" class="hidden">
+  <h2>Formulário de Agendamento — Angela</h2>
+  <form id="formAgendamento">
+    <label>Data do contato*: <input type="date" name="data_contato" required></label>
+    <label>Nome da empresa*: <input type="text" name="empresa" required></label>
+    <label>CNPJ: <input type="text" name="cnpj"></label>
+    <label>Quantidade de lojas: <input type="number" name="qtd_lojas" min="0"></label>
+    <label>Segmento*: <input type="text" name="segmento" required></label>
+    <label>UF*: <input type="text" name="uf" maxlength="2" required></label>
+    <label>Prospecção*: <input type="text" name="prospeccao" required></label>
+    <label>Nome do contato*: <input type="text" name="nome" required></label>
+    <label>Função*: <input type="text" name="funcao" required></label>
+    <label>Contato*: <input type="text" name="contato" required></label>
+    <label>Tipo de reunião*: <input type="text" name="reuniao" required></label>
+    <label>Data da reunião*: <input type="date" name="data_reuniao" required></label>
+    <label>Horário*: <input type="time" name="horario" required></label>
+    <label>Consultor*: 
+      <select name="consultor" required id="selectConsultorForm">
+        <!-- preenchido via JS -->
+      </select>
+    </label>
+    <label>Observações: <textarea name="observacoes" rows="3"></textarea></label>
+    <button type="button" id="btnSalvar">Salvar Agendamento</button>
+    <button type="button" id="btnClear">Limpar</button>
+  </form>
+</div>
+
+<!-- Painel geral de reuniões -->
+<div id="painelReunioes" class="hidden">
+  <h2 id="painelTitulo">Reuniões</h2>
+  <div id="painelSubtitulo"></div>
+  
+  <div class="filters">
+    <label for="filterDate">Filtrar por dia:</label>
+    <input type="date" id="filterDate" />
+    
+    <label for="filterMonth">Filtrar por mês:</label>
+    <select id="filterMonth">
+      <option value="">Todos os meses</option>
+    </select>
   </div>
+  
+  <div id="listaReunioes"></div>
+</div>
 
-  <!-- Área Painel Consultores ou Angela -->
-  <div id="painelReunioes" class="card hidden">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <div class="small" id="painelTitulo">Reuniões</div>
-        <strong id="painelSubtitulo">Hoje</strong>
-      </div>
-      <div>
-        <label for="filterMonth">Filtrar mês:</label>
-        <select id="filterMonth">
-          <option value="">Todos os meses</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="listaReunioes" style="margin-top:10px;"></div>
-    <div id="errorMsg" class="error hidden"></div>
+<!-- Tela Gerentes -->
+<div id="telaGerentes" class="hidden">
+  <h2>Painel Gerentes</h2>
+  <div class="filters">
+    <label for="filterMonthGerente">Filtrar por mês:</label>
+    <select id="filterMonthGerente">
+      <option value="">Todos os meses</option>
+    </select>
   </div>
+  <div class="cards-container" id="cardsGerente"></div>
+  <div id="detalhesGerente"></div>
+</div>
 
-  <!-- Modal editar reunião -->
-  <div id="modalEdit" class="card hidden" style="position:fixed; top:50%; left:50%; transform: translate(-50%, -50%); width: 480px; max-width: 95%; z-index: 9999;">
-    <h3>Editar reunião</h3>
+<!-- Modal edição -->
+<div id="modalEdit" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="content">
+    <h3 id="modalTitle">Editar Reunião</h3>
     <form id="formEditReuniao">
-      <label>Status</label>
-      <select name="status" required>
-        <option value="">Selecione</option>
-        <option>Agendada</option>
-        <option>Confirmada</option>
-        <option>Realizada</option>
-        <option>Cancelada</option>
-      </select>
+      <label>Status*:
+        <select name="status" required>
+          <option value="">Selecione...</option>
+          <option value="AGUARDANDO RETORNO">AGUARDANDO RETORNO</option>
+          <option value="FECHADO">FECHADO</option>
+          <option value="NÃO TEVE INTERESSE">NÃO TEVE INTERESSE</option>
+          <option value="AGUARDANDO PIX">AGUARDANDO PIX</option>
+        </select>
+      </label>
+      <label>Data da reunião*:
+        <input type="date" name="data_da_reuniao" required>
+      </label>
+      <label>Horário*:
+        <input type="time" name="horario" required>
+      </label>
+      <label>Observação:
+        <textarea name="observacao" rows="3"></textarea>
+      </label>
 
-      <label>Data da Reunião</label>
-      <input type="date" name="data_da_reuniao" required>
-
-      <label>Horário</label>
-      <input type="time" name="horario" required>
-
-      <label>Observações</label>
-      <textarea name="observacao" rows="3"></textarea>
-
-      <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
-        <button type="submit">Salvar</button>
-        <button type="button" id="btnCancelEdit" class="btn-secondary">Cancelar</button>
+      <!-- Para aceitar/sugerir/transferir -->
+      <div id="acoesConsultor" class="hidden" style="margin-top:10px;">
+        <button type="button" id="btnAceitar">Aceitar Reunião</button>
+        <button type="button" id="btnSugerirHorario">Sugerir Outro Horário</button>
+        <button type="button" id="btnTransferirConsultor">Transferir para Outro Consultor</button>
       </div>
+
+      <button type="submit">Salvar</button>
+      <button type="button" id="btnCancelEdit">Cancelar</button>
     </form>
   </div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://apis.google.com/js/api.js" async defer></script>
 <script>
-  const CLIENT_ID = '689575420157-di4d81kgeo6tnaf70edsi6sii5523sev.apps.googleusercontent.com';
-  const API_KEY = 'AIzaSyAiU6bMImfPaQLJj8nVO4V0Je67sSyvGTo';
-  const SHEET_ID = '1-kcIEyUDiBWcGEUKxqotqlpyT-hIta5k3Cx1_mFEUIg';
-  const SHEET_RANGE = 'Sheet1!A1:Z9999';
+  // Configurações iniciais
+  const SHEET_ID = 'SUA_PLANILHA_ID_AQUI'; // Insira sua planilha Google aqui
+  const SHEET_RANGE = 'Sheet1!A1:Z'; // faixa da planilha para leitura e escrita
 
+  // Emails dos usuários - ATUALIZE conforme seu uso
+  const emailAngela = 'angela@seuemail.com';
+  const emailAdmin = 'seuemailadmin@seuemail.com';
+
+  // Map email consultores para nomes
+  const emailsConsultores = {
+    'consultor1@seuemail.com': 'Lucas',
+    'consultor2@seuemail.com': 'Mariana',
+    'consultor3@seuemail.com': 'João'
+  };
+
+  // Variáveis de estado
+  let gapiInited = false;
+  let tokenClient;
+  let userProfile = null;
+  let allMeetingsData = [];
+  let currentView = null; // 'angela', 'consultor', 'gerente'
+  let currentConsultorName = null;
+  let currentEditingRowIndex = null;
+
+  // Elementos do DOM
   const btnSignIn = document.getElementById('btnSignIn');
   const btnSignOut = document.getElementById('btnSignOut');
   const userEmailEl = document.getElementById('userEmail');
-  const selectUser = document.getElementById('selectUser');
-
   const formAngela = document.getElementById('formAngela');
   const formAgendamento = document.getElementById('formAgendamento');
-  const btnSalvar = document.getElementById('btnSalvar');
-  const btnWhats = document.getElementById('btnWhats');
-  const btnClear = document.getElementById('btnClear');
-
   const painelReunioes = document.getElementById('painelReunioes');
   const painelTitulo = document.getElementById('painelTitulo');
   const painelSubtitulo = document.getElementById('painelSubtitulo');
   const listaReunioes = document.getElementById('listaReunioes');
+  const selectUserContainer = document.getElementById('selectUserContainer');
+  const selectUser = document.getElementById('selectUser');
+  const filterDate = document.getElementById('filterDate');
   const filterMonth = document.getElementById('filterMonth');
-  const errorMsg = document.getElementById('errorMsg');
+  const filterMonthGerente = document.getElementById('filterMonthGerente');
+  const telaGerentes = document.getElementById('telaGerentes');
+  const cardsGerente = document.getElementById('cardsGerente');
+  const detalhesGerente = document.getElementById('detalhesGerente');
 
   const modalEdit = document.getElementById('modalEdit');
   const formEditReuniao = document.getElementById('formEditReuniao');
   const btnCancelEdit = document.getElementById('btnCancelEdit');
+  const btnSalvar = document.getElementById('btnSalvar');
+  const btnClear = document.getElementById('btnClear');
 
-  let tokenClient;
-  let gapiInited = false;
-  let userProfile = null;
-  let allMeetingsData = [];
-  let currentView = null; // 'angela' ou consultor
-  let currentConsultorName = null; // nome consultor se for consultor
+  const btnAceitar = document.getElementById('btnAceitar');
+  const btnSugerirHorario = document.getElementById('btnSugerirHorario');
+  const btnTransferirConsultor = document.getElementById('btnTransferirConsultor');
 
-  // Emails fixos (coloque os reais que usam)
-  const emailAngela = 'angela@exemplo.com';
-  const emailsConsultores = {
-    'glaucia@exemplo.com': 'Glaucia',
-    'leticia@exemplo.com': 'Leticia',
-    'marcelo@exemplo.com': 'Marcelo',
-    'gabriel@exemplo.com': 'Gabriel'
-  };
-  const emailAdmin = 'felipesoufacil@gmail.com'; // você para escolher telas
+  const selectConsultorForm = document.getElementById('selectConsultorForm');
 
-  // Mapping status possíveis para facilitar
-  const statusOptions = ['Agendada', 'Confirmada', 'Realizada', 'Cancelada'];
-
-  // Utilitário para formatar datas yyyy-mm-dd -> dd/mm/yyyy
-  function formatDateBR(iso) {
-    if(!iso) return '-';
-    const [y,m,d] = iso.split('-');
-    return `${d}/${m}/${y}`;
-  }
-
-  // Normalize header para campo chave
-  function normalizeHeader(header){
-    return header.toLowerCase().trim().replace(/\s+/g, '_').normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-  }
-
-  // Inicia GAPI client
-  function initGapiClient(){
+  // Inicialização API Google e OAuth
+  function initGapiClient() {
     gapi.load('client', async () => {
-      try {
-        await gapi.client.init({
-          apiKey: API_KEY,
-          discoveryDocs: [
-            'https://sheets.googleapis.com/$discovery/rest?version=v4',
-            'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
-          ]
-        });
-        gapiInited = true;
-        await loadMeetings();
-      } catch (err) {
-        console.error('Erro ao inicializar GAPI', err);
-        showError('Erro ao inicializar APIs Google.');
-      }
+      await gapi.client.init({
+        apiKey: 'SUA_API_KEY_GOOGLE',
+        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+      });
+      gapiInited = true;
     });
   }
 
-  // Inicializa Token client OAuth
-  function initTokenClient(){
+  function initTokenClient() {
     tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events openid email profile',
-      callback: async (resp) => {
-        if(resp.error){
-          console.error('Erro no token', resp);
-          alert('Erro na autenticação: ' + resp.error);
-          return;
-        }
-        try {
-          const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {headers: {Authorization: 'Bearer ' + resp.access_token}});
-          userProfile = await r.json();
-          userEmailEl.textContent = userProfile.email;
-          btnSignIn.classList.add('hidden');
-          btnSignOut.classList.remove('hidden');
-          await loadMeetings();
-          setupViewByEmail();
-        } catch (e) {
-          console.error(e);
-          alert('Erro ao buscar perfil.');
-        }
-      }
+      client_id: 'SEU_CLIENT_ID_GOOGLE',
+      scope: 'https://www.googleapis.com/auth/spreadsheets',
+      callback: '', 
     });
   }
 
+  // Login
   btnSignIn.addEventListener('click', () => {
-    if(!tokenClient) return alert('Cliente OAuth não iniciado');
+    if (!tokenClient) return alert('Token Client não inicializado');
+    tokenClient.callback = async (resp) => {
+      if (resp.error !== undefined) {
+        throw (resp);
+      }
+      await loadUserProfile();
+      setupViewByEmail();
+      await loadMeetings();
+      if (currentView) renderMeetings();
+      if(currentView === 'gerente') renderGerenteCards();
+    };
     tokenClient.requestAccessToken();
   });
 
+  // Logout
   btnSignOut.addEventListener('click', () => {
     userProfile = null;
     allMeetingsData = [];
     currentView = null;
     currentConsultorName = null;
+    currentEditingRowIndex = null;
     userEmailEl.textContent = 'Não conectado';
     btnSignIn.classList.remove('hidden');
     btnSignOut.classList.add('hidden');
     formAngela.classList.add('hidden');
     painelReunioes.classList.add('hidden');
-    selectUser.classList.add('hidden');
+    telaGerentes.classList.add('hidden');
+    selectUserContainer.classList.add('hidden');
     listaReunioes.innerHTML = '';
     filterMonth.innerHTML = '<option value="">Todos os meses</option>';
+    filterMonthGerente.innerHTML = '<option value="">Todos os meses</option>';
   });
 
+  async function loadUserProfile() {
+    const token = gapi.client.getToken();
+    if (!token) return;
+    const userinfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: {
+        Authorization: `Bearer ${token.access_token}`
+      }
+    });
+    userProfile = await userinfo.json();
+    userEmailEl.textContent = userProfile.email || 'Sem email';
+    btnSignIn.classList.add('hidden');
+    btnSignOut.classList.remove('hidden');
+  }
+
   // Carregar reuniões da planilha
-  async function loadMeetings(){
-    if(!gapiInited) return;
+  async function loadMeetings() {
+    if (!gapiInited) return;
     try {
       const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
         range: SHEET_RANGE
       });
       const rows = res.result.values || [];
-      if(rows.length < 2){
+      if (rows.length < 2) {
         allMeetingsData = [];
-        showError('Nenhuma reunião encontrada.');
+        alert('Nenhuma reunião encontrada.');
         return;
       }
       const headerRaw = rows[0];
       const header = headerRaw.map(normalizeHeader);
-      allMeetingsData = rows.slice(1).map(r => {
+      allMeetingsData = rows.slice(1).map((r, idx) => {
         const obj = {};
-        header.forEach((h,i) => obj[h] = r[i] || '');
+        header.forEach((h, i) => obj[h] = r[i] || '');
+        obj._rowId = idx; // salvar índice para edição posterior
         return obj;
       });
       hideError();
-    } catch(err) {
+      populateSelectConsultores();
+      populateFilterMonthOptions();
+      populateFilterMonthOptionsGerente();
+    } catch (err) {
       console.error('Erro ao carregar reuniões:', err);
-      showError('Erro ao carregar dados da planilha.');
+      alert('Erro ao carregar dados da planilha.');
     }
   }
 
-  // Montar lista reuniões de acordo com view e filtro
-  function renderMeetings({view, consultor=null, filterDate=null, filterMonthVal=null}){
-    listaReunioes.innerHTML = '';
+  // Normaliza cabeçalhos para acessar propriedades
+  function normalizeHeader(h) {
+    return h.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  }
 
-    if(!allMeetingsData.length){
+  // Popula select consultores formulário Angela
+  function populateSelectConsultores() {
+    if (!selectConsultorForm) return;
+    selectConsultorForm.innerHTML = '';
+    Object.values(emailsConsultores).forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      selectConsultorForm.appendChild(opt);
+    });
+  }
+
+  // Renderizar reuniões conforme view, filtro dia e mês
+  function renderMeetings() {
+    listaReunioes.innerHTML = '';
+    if (!allMeetingsData.length) {
       listaReunioes.innerHTML = '<div class="muted">Nenhuma reunião disponível.</div>';
       return;
     }
 
     let filtered = [];
 
-    if(view === 'angela'){
-      // Angela vê reuniões que ela agendou (email_de_quem_mandou contendo "angela")
-      filtered = allMeetingsData.filter(r => (r.email_de_quem_mandou || '').toLowerCase().includes('angela'));
-    } else if(view === 'consultor' && consultor){
-      // Consultor vê reuniões dele (campo consultor = nome)
-      filtered = allMeetingsData.filter(r => r.consultor.toLowerCase() === consultor.toLowerCase());
-    } else {
-      listaReunioes.innerHTML = '<div class="muted">Nenhuma visualização disponível para este usuário.</div>';
-      return;
+    if (currentView === 'angela') {
+      filtered = allMeetingsData.filter(r => (r.email_de_quem_mandou || '').toLowerCase() === emailAngela.toLowerCase());
+    } else if (currentView === 'consultor' && currentConsultorName) {
+      filtered = allMeetingsData.filter(r => r.consultor.toLowerCase() === currentConsultorName.toLowerCase());
+    } else if (currentView === 'gerente') {
+      filtered = allMeetingsData; // Gerente vê tudo
     }
 
-    // Filtrar por data se passado
-    if(filterDate){
-      filtered = filtered.filter(r => r.data_da_reuniao === filterDate);
-      painelSubtitulo.textContent = 'Dia: ' + formatDateBR(filterDate);
-    } else {
-      // Por padrão mostrar reuniões de hoje
-      const hoje = new Date().toISOString().slice(0,10);
-      filtered = filtered.filter(r => r.data_da_reuniao === hoje);
-      painelSubtitulo.textContent = 'Hoje';
+    // Filtro dia
+    if (filterDate.value) {
+      filtered = filtered.filter(r => r.data_da_reuniao === filterDate.value);
     }
 
-    // Filtrar por mês se informado
-    if(filterMonthVal){
-      filtered = filtered.filter(r => r.data_da_reuniao?.startsWith(filterMonthVal));
+    // Filtro mês
+    if (filterMonth.value) {
+      filtered = filtered.filter(r => {
+        if (!r.data_da_reuniao) return false;
+        return r.data_da_reuniao.startsWith(filterMonth.value);
+      });
     }
 
-    // Ordenar por horário
-    filtered.sort((a,b) => a.horario.localeCompare(b.horario));
-
-    if(filtered.length === 0){
+    if (filtered.length === 0) {
       listaReunioes.innerHTML = '<div class="muted">Nenhuma reunião encontrada para o filtro.</div>';
       return;
     }
 
-    // Criar elementos para reuniões
-    filtered.forEach((row, idx) => {
-      listaReunioes.appendChild(createMeetingElement(row, idx));
-    });
-  }
+    filtered.forEach(r => {
+      const div = document.createElement('div');
+      div.classList.add('meeting-item');
+      div.dataset.rowId = r._rowId;
 
-  // Criar elemento reunião
-  function createMeetingElement(row, idx){
-    const div = document.createElement('div');
-    div.className = 'meeting-item';
+      const header = document.createElement('div');
+      header.classList.add('meeting-header');
 
-    div.innerHTML = `
-      <div class="meeting-header">
-        <strong>${row.nome_da_empresa || '-'}</strong>
-        <div class="muted">${row.horario || '-'} — ${row.consultor || '-'}</div>
-        <button aria-expanded="false" aria-controls="details-${idx}">Abrir informações</button>
-      </div>
-      <div class="meeting-details" id="details-${idx}">
-        <p><strong>CNPJ:</strong> ${row.cnpj || '-'}</p>
-        <p><strong>Quantidade de lojas:</strong> ${row.quantidade_de_lojas || '-'}</p>
-        <p><strong>Segmento:</strong> ${row.segmento || '-'}</p>
-        <p><strong>UF:</strong> ${row.uf || '-'}</p>
-        <p><strong>Prospecção:</strong> ${row.prospeccao || '-'}</p>
-        <p><strong>Nome do contato:</strong> ${row.nome || '-'}</p>
-        <p><strong>Função:</strong> ${row.funcao || '-'}</p>
-        <p><strong>Contato:</strong> ${row.contato || '-'}</p>
-        <p><strong>Tipo de reunião:</strong> ${row.reuniao || '-'}</p>
-        <p><strong>Data da reunião:</strong> ${formatDateBR(row.data_da_reuniao)}</p>
-        <p><strong>Horário:</strong> ${row.horario || '-'}</p>
-        <p><strong>Status:</strong> ${row.status || '-'}</p>
-        <p><strong>Observações:</strong> ${row.observacao || '-'}</p>
-        <p><strong>Email de quem mandou:</strong> ${row.email_de_quem_mandou || '-'}</p>
-        <div class="actions">
-          <button class="btnView">Ver</button>
-          <button class="btnEditStatus">Editar Status</button>
-          <button class="btnEditReuniao">Editar</button>
-        </div>
-      </div>
-    `;
+      header.innerHTML = `<strong>${r.nome_da_empresa || '(sem empresa)'} - ${r.data_da_reuniao || ''} ${r.horario || ''}</strong>
+      <span>Status: <em>${r.status || 'SEM STATUS'}</em></span>`;
 
-    const btnToggle = div.querySelector('button[aria-expanded]');
-    const details = div.querySelector('.meeting-details');
-    const btnView = div.querySelector('.btnView');
-    const btnEditStatus = div.querySelector('.btnEditStatus');
-    const btnEditReuniao = div.querySelector('.btnEditReuniao');
+      div.appendChild(header);
 
-    btnToggle.addEventListener('click', () => {
-      const expanded = btnToggle.getAttribute('aria-expanded') === 'true';
-      btnToggle.setAttribute('aria-expanded', String(!expanded));
-      if(expanded){
-        details.style.display = 'none';
-        btnToggle.textContent = 'Abrir informações';
-      } else {
-        details.style.display = 'block';
-        btnToggle.textContent = 'Fechar informações';
+      const detalhes = document.createElement('div');
+      detalhes.classList.add('meeting-details');
+      detalhes.innerHTML = `
+        <p><strong>Consultor:</strong> ${r.consultor}</p>
+        <p><strong>Contato:</strong> ${r.nome || ''} (${r.funcao || ''})</p>
+        <p><strong>Segmento:</strong> ${r.segmento || ''}</p>
+        <p><strong>Observação:</strong> ${r.observacao || r.observacao || ''}</p>
+      `;
+
+      div.appendChild(detalhes);
+
+      const actions = document.createElement('div');
+      actions.classList.add('actions');
+
+      // Botão abrir detalhes
+      const btnToggle = document.createElement('button');
+      btnToggle.textContent = 'Abrir Detalhes';
+      btnToggle.addEventListener('click', () => {
+        if (detalhes.style.display === 'block') {
+          detalhes.style.display = 'none';
+          btnToggle.textContent = 'Abrir Detalhes';
+        } else {
+          detalhes.style.display = 'block';
+          btnToggle.textContent = 'Fechar Detalhes';
+        }
+      });
+      actions.appendChild(btnToggle);
+
+      // Botão editar status (somente consultores e angela)
+      if (currentView === 'consultor' || currentView === 'angela') {
+        const btnEdit = document.createElement('button');
+        btnEdit.textContent = 'Editar';
+        btnEdit.addEventListener('click', () => openEditModal(r));
+        actions.appendChild(btnEdit);
       }
-    });
 
-    btnView.addEventListener('click', () => {
-      if(details.style.display === 'block'){
-        details.style.display = 'none';
-        btnToggle.textContent = 'Abrir informações';
-        btnToggle.setAttribute('aria-expanded', 'false');
-      } else {
-        details.style.display = 'block';
-        btnToggle.textContent = 'Fechar informações';
-        btnToggle.setAttribute('aria-expanded', 'true');
+      // Botões específicos consultor para aceitar/sugerir/transferir
+      if (currentView === 'consultor') {
+        const btnAceitar = document.createElement('button');
+        btnAceitar.textContent = 'Aceitar';
+        btnAceitar.addEventListener('click', () => aceitarReuniao(r));
+        actions.appendChild(btnAceitar);
+
+        const btnSugerir = document.createElement('button');
+        btnSugerir.textContent = 'Sugerir Outro Horário';
+        btnSugerir.addEventListener('click', () => sugerirOutroHorario(r));
+        actions.appendChild(btnSugerir);
+
+        const btnTransferir = document.createElement('button');
+        btnTransferir.textContent = 'Transferir para Outro Consultor';
+        btnTransferir.addEventListener('click', () => transferirParaOutroConsultor(r));
+        actions.appendChild(btnTransferir);
       }
-    });
 
-    btnEditStatus.addEventListener('click', () => {
-      openEditModal(row, 'status');
-    });
+      // Botões específicos Angela para aceitar sugestões/transferências
+      if (currentView === 'angela' && (r.status_pendente_sugestao === 'sugestao' || r.status_pendente_sugestao === 'transferencia')) {
+        const btnAceitarSugestao = document.createElement('button');
+        btnAceitarSugestao.textContent = 'Aceitar Sugestão';
+        btnAceitarSugestao.addEventListener('click', () => aceitarSugestao(r));
+        actions.appendChild(btnAceitarSugestao);
 
-    btnEditReuniao.addEventListener('click', () => {
-      openEditModal(row, 'full');
-    });
+        if (r.status_pendente_sugestao === 'transferencia') {
+          const btnEscolherConsultor = document.createElement('button');
+          btnEscolherConsultor.textContent = 'Escolher Novo Consultor';
+          btnEscolherConsultor.addEventListener('click', () => escolherConsultorTransferencia(r));
+          actions.appendChild(btnEscolherConsultor);
+        }
+      }
 
-    return div;
+      div.appendChild(actions);
+
+      listaReunioes.appendChild(div);
+    });
   }
 
-  // Abre modal para editar status ou reunião completa
-  function openEditModal(row, mode='status'){
-    modalEdit.classList.remove('hidden');
-    formEditReuniao.reset();
+  // Funções ações consultor
+  function aceitarReuniao(r) {
+    atualizarStatusReuniao(r._rowId, 'AGUARDANDO RETORNO');
+  }
+  function sugerirOutroHorario(r) {
+    atualizarStatusReuniao(r._rowId, 'AGUARDANDO RETORNO', true, 'sugestao');
+    alert('Sua sugestão foi enviada para Angela. Aguarde a resposta.');
+  }
+  function transferirParaOutroConsultor(r) {
+    atualizarStatusReuniao(r._rowId, 'AGUARDANDO RETORNO', true, 'transferencia');
+    alert('Solicitação de transferência enviada para Angela.');
+  }
 
-    // Preencher campos com dados atuais
-    formEditReuniao.status.value = row.status || '';
-    formEditReuniao.data_da_reuniao.value = row.data_da_reuniao || '';
-    formEditReuniao.horario.value = row.horario || '';
-    formEditReuniao.observacao.value = row.observacao || '';
-
-    // Salvar referência da reunião que está editando
-    formEditReuniao.dataset.rowId = row._rowId || null;
-    formEditReuniao.dataset.mode = mode;
-
-    // Se modo status só mostrar select status, esconder os outros campos
-    if(mode === 'status'){
-      formEditReuniao.data_da_reuniao.parentElement.style.display = 'none';
-      formEditReuniao.horario.parentElement.style.display = 'none';
-      formEditReuniao.observacao.parentElement.style.display = 'none';
-    } else {
-      formEditReuniao.data_da_reuniao.parentElement.style.display = 'block';
-      formEditReuniao.horario.parentElement.style.display = 'block';
-      formEditReuniao.observacao.parentElement.style.display = 'block';
+  // Ações Angela
+  function aceitarSugestao(r) {
+    atualizarStatusReuniao(r._rowId, 'AGUARDANDO RETORNO', false, '');
+    alert('Sugestão aceita.');
+  }
+  function escolherConsultorTransferencia(r) {
+    const novoConsultor = prompt('Informe o novo consultor para essa transferência:');
+    if (novoConsultor) {
+      atualizarConsultor(r._rowId, novoConsultor);
+      alert('Consultor alterado com sucesso.');
+      loadMeetings().then(renderMeetings);
     }
   }
 
-  // Fechar modal
-  btnCancelEdit.addEventListener('click', () => {
-    modalEdit.classList.add('hidden');
-  });
-
-  // Salvar edição da reunião na planilha
-  formEditReuniao.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const rowId = formEditReuniao.dataset.rowId;
-    if(rowId == null){
-      alert('Erro: não foi possível identificar a reunião.');
-      return;
+  // Atualiza status, pendencias e consultor na planilha
+  async function atualizarStatusReuniao(rowIndex, novoStatus, pendencia = false, tipoPendencia = '') {
+    if (!gapiInited) return alert('API não inicializada');
+    const statusPend = pendencia ? tipoPendencia : '';
+    const rows = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: SHEET_RANGE
+    });
+    const headerRaw = rows.result.values[0];
+    const header = headerRaw.map(normalizeHeader);
+    // encontrar colunas necessárias
+    const idxStatus = header.indexOf('status');
+    const idxPendencia = header.indexOf('status_pendente_sugestao');
+    const idxRow = rowIndex + 1;
+    if (idxStatus === -1 || idxPendencia === -1) {
+      return alert('Colunas necessárias não encontradas na planilha.');
     }
 
-    const status = formEditReuniao.status.value;
-    const dataReuniao = formEditReuniao.data_da_reuniao.value;
-    const horario = formEditReuniao.horario.value;
-    const observacao = formEditReuniao.observacao.value;
-
-    if(!status){
-      alert('Status é obrigatório.');
-      return;
-    }
-    if(!dataReuniao){
-      alert('Data da reunião é obrigatória.');
-      return;
-    }
-    if(!horario){
-      alert('Horário é obrigatório.');
-      return;
-    }
-
-    // Atualizar a planilha na linha correta (rowId é índice + 2 pois o índice é zero baseado em dados sem cabeçalho, e linha 1 é cabeçalho)
-    // Atualizar colunas: status, data_da_reuniao, horario, observacao
-    // Precisamos saber o índice das colunas
-
-    const header = Object.keys(allMeetingsData[0] || {});
-    const statusCol = header.indexOf('status');
-    const dataReuniaoCol = header.indexOf('data_da_reuniao');
-    const horarioCol = header.indexOf('horario');
-    const observacaoCol = header.indexOf('observacao');
-
-    if(statusCol === -1 || dataReuniaoCol === -1 || horarioCol === -1 || observacaoCol === -1){
-      alert('Colunas necessárias não encontradas na planilha.');
-      return;
-    }
-
-    // Criar array para update (preenchendo as colunas na ordem)
-    // vamos recuperar a linha original (com base na rowId)
-    let rowData = [];
-    for(let h of header){
-      rowData.push(allMeetingsData[rowId][h] || '');
-    }
-    // Atualizar campos alterados
-    rowData[statusCol] = status;
-    rowData[dataReuniaoCol] = dataReuniao;
-    rowData[horarioCol] = horario;
-    rowData[observacaoCol] = observacao;
-
-    // Atualizar na planilha Google Sheets
+    const values = [
+      [novoStatus, statusPend]
+    ];
     try {
       await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
-        range: `Sheet1!A${rowId+2}:Z${rowId+2}`, // linha 2 + índice, colunas A até Z (garante atualizar toda linha)
+        range: `Sheet1!${colToLetter(idxStatus + 1)}${idxRow + 1}:${colToLetter(idxPendencia + 1)}${idxRow + 1}`,
         valueInputOption: 'RAW',
-        resource: {values: [rowData]}
+        resource: {values}
       });
-      // Atualizar localmente
-      allMeetingsData[rowId] = {};
-      header.forEach((h,i) => allMeetingsData[rowId][h] = rowData[i]);
+      alert('Status atualizado!');
+      await loadMeetings();
+      renderMeetings();
+    } catch (err) {
+      alert('Erro ao atualizar status');
+      console.error(err);
+    }
+  }
 
+  // Atualiza consultor na planilha (para transferência)
+  async function atualizarConsultor(rowIndex, novoConsultor) {
+    if (!gapiInited) return alert('API não inicializada');
+    const rows = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: SHEET_RANGE
+    });
+    const headerRaw = rows.result.values[0];
+    const header = headerRaw.map(normalizeHeader);
+    const idxConsultor = header.indexOf('consultor');
+    const idxRow = rowIndex + 1;
+    if (idxConsultor === -1) {
+      return alert('Coluna Consultor não encontrada.');
+    }
+    const values = [[novoConsultor]];
+    try {
+      await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: `Sheet1!${colToLetter(idxConsultor + 1)}${idxRow + 1}`,
+        valueInputOption: 'RAW',
+        resource: {values}
+      });
+      alert('Consultor atualizado!');
+      await loadMeetings();
+      renderMeetings();
+    } catch (err) {
+      alert('Erro ao atualizar consultor');
+      console.error(err);
+    }
+  }
+
+  // Função auxiliar para converter índice da coluna para letra (ex: 1 -> A, 27 -> AA)
+  function colToLetter(col) {
+    let letter = '';
+    while (col > 0) {
+      let mod = (col - 1) % 26;
+      letter = String.fromCharCode(65 + mod) + letter;
+      col = Math.floor((col - mod) / 26);
+    }
+    return letter;
+  }
+
+  // Modal editar
+  function openEditModal(reuniao) {
+    currentEditingRowIndex = reuniao._rowId;
+    modalEdit.classList.remove('hidden');
+    const f = formEditReuniao;
+    f.status.value = reuniao.status || '';
+    f.data_da_reuniao.value = reuniao.data_da_reuniao || '';
+    f.horario.value = reuniao.horario || '';
+    f.observacao.value = reuniao.observacao || '';
+    
+    // Mostrar ou esconder as ações extras se for consultor
+    if(currentView === 'consultor') {
+      document.getElementById('acoesConsultor').classList.remove('hidden');
+    } else {
+      document.getElementById('acoesConsultor').classList.add('hidden');
+    }
+  }
+  btnCancelEdit.addEventListener('click', () => {
+    modalEdit.classList.add('hidden');
+    currentEditingRowIndex = null;
+  });
+
+  formEditReuniao.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!currentEditingRowIndex && currentEditingRowIndex !== 0) return;
+    if (!gapiInited) return alert('API não inicializada');
+    const status = formEditReuniao.status.value;
+    const dataReuniao = formEditReuniao.data_da_reuniao.value;
+    const horario = formEditReuniao.horario.value;
+    const obs = formEditReuniao.observacao.value;
+
+    // Atualiza a planilha (colunas Status, Data da Reunião, Horário, Observação)
+    const rows = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: SHEET_RANGE
+    });
+    const headerRaw = rows.result.values[0];
+    const header = headerRaw.map(normalizeHeader);
+    const idxStatus = header.indexOf('status');
+    const idxData = header.indexOf('data_da_reuniao');
+    const idxHorario = header.indexOf('horario');
+    const idxObs = header.indexOf('observacao');
+    const idxRow = currentEditingRowIndex + 1;
+    if ([idxStatus, idxData, idxHorario, idxObs].includes(-1)) {
+      return alert('Colunas necessárias não encontradas na planilha.');
+    }
+    const values = [[status, dataReuniao, horario, obs]];
+    try {
+      await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: `Sheet1!${colToLetter(idxStatus + 1)}${idxRow + 1}:${colToLetter(idxObs + 1)}${idxRow + 1}`,
+        valueInputOption: 'RAW',
+        resource: {values}
+      });
       alert('Reunião atualizada com sucesso!');
       modalEdit.classList.add('hidden');
-      // Re-renderizar lista para refletir
-      renderMeetings({view: currentView, consultor: currentConsultorName, filterMonthVal: filterMonth.value});
-    } catch(err) {
-      console.error('Erro ao atualizar reunião:', err);
-      alert('Erro ao atualizar reunião.');
+      currentEditingRowIndex = null;
+      await loadMeetings();
+      renderMeetings();
+    } catch (err) {
+      alert('Erro ao atualizar reunião');
+      console.error(err);
     }
   });
 
-  // Mostrar erro
-  function showError(msg){
-    errorMsg.textContent = msg;
-    errorMsg.classList.remove('hidden');
-  }
-  function hideError(){
-    errorMsg.textContent = '';
-    errorMsg.classList.add('hidden');
-  }
-
-  // Setup tela conforme email logado
-  function setupViewByEmail(){
-    if(!userProfile?.email) return;
-    const email = userProfile.email.toLowerCase();
-
-    // Reset tudo
-    formAngela.classList.add('hidden');
-    painelReunioes.classList.add('hidden');
-    selectUser.classList.add('hidden');
-
-    if(email === emailAngela){
-      // Angela vê formulário + painel
-      currentView = 'angela';
-      currentConsultorName = null;
-      formAngela.classList.remove('hidden');
-      painelReunioes.classList.remove('hidden');
-      painelTitulo.textContent = 'Reuniões agendadas por Angela';
-      populateFilterMonthOptions();
-      renderMeetings({view: currentView});
-    } else if(Object.keys(emailsConsultores).includes(email)){
-      // Consultor vê só seu painel
-      currentView = 'consultor';
-      currentConsultorName = emailsConsultores[email];
-      painelReunioes.classList.remove('hidden');
-      painelTitulo.textContent = `Reuniões de ${currentConsultorName}`;
-      populateFilterMonthOptions();
-      renderMeetings({view: currentView, consultor: currentConsultorName});
-    } else if(email === emailAdmin){
-      // Você pode escolher tela (Angela ou consultores)
-      selectUser.classList.remove('hidden');
-      selectUser.innerHTML = `
-        <option value="">Selecione a tela</option>
-        <option value="angela">Angela</option>
-        ${Object.values(emailsConsultores).map(c => `<option value="${c.toLowerCase()}">${c}</option>`).join('')}
-      `;
-      painelReunioes.classList.remove('hidden');
-      painelTitulo.textContent = 'Selecione uma tela para visualizar';
-      listaReunioes.innerHTML = '';
-      formAngela.classList.add('hidden');
-      currentView = null;
-      currentConsultorName = null;
-    } else {
-      // Usuário não autorizado
-      alert('Você não tem permissão para acessar este sistema.');
-      userEmailEl.textContent = 'Usuário não autorizado';
-      btnSignIn.classList.remove('hidden');
-      btnSignOut.classList.add('hidden');
-      formAngela.classList.add('hidden');
-      painelReunioes.classList.add('hidden');
-      selectUser.classList.add('hidden');
-      listaReunioes.innerHTML = '';
-      currentView = null;
-      currentConsultorName = null;
-    }
-  }
-
-  // Quando o admin escolher tela, atualizar
-  selectUser.addEventListener('change', () => {
-    const val = selectUser.value;
-    if(val === 'angela'){
-      currentView = 'angela';
-      currentConsultorName = null;
-      formAngela.classList.remove('hidden');
-      painelTitulo.textContent = 'Reuniões agendadas por Angela';
-      populateFilterMonthOptions();
-      renderMeetings({view: currentView});
-    } else if(val){
-      currentView = 'consultor';
-      currentConsultorName = val.charAt(0).toUpperCase() + val.slice(1);
-      formAngela.classList.add('hidden');
-      painelTitulo.textContent = `Reuniões de ${currentConsultorName}`;
-      populateFilterMonthOptions();
-      renderMeetings({view: currentView, consultor: currentConsultorName});
-    } else {
-      formAngela.classList.add('hidden');
-      painelTitulo.textContent = 'Selecione uma tela para visualizar';
-      listaReunioes.innerHTML = '';
-      currentView = null;
-      currentConsultorName = null;
-    }
-  });
-
-  // Popula select mês com meses distintos das reuniões
-  function populateFilterMonthOptions(){
-    const monthsSet = new Set();
-    allMeetingsData.forEach(r => {
-      if(r.data_da_reuniao && r.data_da_reuniao.length >= 7){
-        monthsSet.add(r.data_da_reuniao.slice(0,7));
-      }
-    });
-    const monthsArr = Array.from(monthsSet).sort((a,b) => b.localeCompare(a)); // decrescente
-    filterMonth.innerHTML = '<option value="">Todos os meses</option>' + monthsArr.map(m => {
-      const [y,mm] = m.split('-');
-      return `<option value="${m}">${mm}/${y}</option>`;
-    }).join('');
-  }
-
-  // Quando muda filtro mês
-  filterMonth.addEventListener('change', () => {
-    if(!currentView) return;
-    renderMeetings({view: currentView, consultor: currentConsultorName, filterMonthVal: filterMonth.value});
-  });
-
-  // === Formulário Angela ===
-
-  btnClear.addEventListener('click', () => formAgendamento.reset());
-
+  // Formulário Angela salvar
   btnSalvar.addEventListener('click', async () => {
+    if (!gapiInited) return alert('API não inicializada');
     const formData = new FormData(formAgendamento);
-    const dataObj = {};
-    formData.forEach((v,k) => dataObj[k] = v.trim());
-
-    // Validação simples
-    if(!dataObj.data_contato || !dataObj.empresa || !dataObj.segmento || !dataObj.uf || !dataObj.prospeccao || !dataObj.nome || !dataObj.funcao || !dataObj.contato || !dataObj.reuniao || !dataObj.data_reuniao || !dataObj.horario || !dataObj.consultor){
-      alert('Preencha todos os campos obrigatórios!');
-      return;
+    // Validações mínimas
+    if(!formData.get('data_contato') || !formData.get('empresa') || !formData.get('segmento') || !formData.get('uf') || !formData.get('prospeccao') || !formData.get('nome') || !formData.get('funcao') || !formData.get('contato') || !formData.get('reuniao') || !formData.get('data_reuniao') || !formData.get('horario') || !formData.get('consultor')) {
+      return alert('Preencha todos os campos obrigatórios.');
     }
-
-    // Montar linha para inserir na planilha (ordem conforme colunas da planilha):
-    // Data do agendamento | Data do contato | Nome da empresa | CNPJ | Quantidade de lojas | Segmento | UF | Prospecção | Nome | Função | Contato | Reunião | Data da Reunião | Horário | Consultor | Numero do consultor | Observação | Email de quem mandou | Status
-    // Como não temos numero do consultor no form, vamos deixar vazio
-    // Status inicial: Agendada
-
+    // Monta linha para planilha
     const novaLinha = [
-      new Date().toLocaleDateString('pt-BR'), // Data do agendamento (hoje)
-      dataObj.data_contato,
-      dataObj.empresa,
-      dataObj.cnpj || '',
-      dataObj.qtd_lojas || '',
-      dataObj.segmento,
-      dataObj.uf,
-      dataObj.prospeccao,
-      dataObj.nome,
-      dataObj.funcao,
-      dataObj.contato,
-      dataObj.reuniao,
-      dataObj.data_reuniao,
-      dataObj.horario,
-      dataObj.consultor,
-      '', // Número do consultor (vazio)
-      dataObj.observacoes || '',
-      userProfile.email, // Email de quem mandou
-      'Agendada' // status inicial
+      new Date().toISOString().split('T')[0],            // Data do agendamento = hoje
+      formData.get('data_contato'),
+      formData.get('empresa'),
+      formData.get('cnpj'),
+      formData.get('qtd_lojas'),
+      formData.get('segmento'),
+      formData.get('uf'),
+      formData.get('prospeccao'),
+      formData.get('nome'),
+      formData.get('funcao'),
+      formData.get('contato'),
+      formData.get('reuniao'),
+      formData.get('data_reuniao'),
+      formData.get('horario'),
+      formData.get('consultor'),
+      '', // Numero do consultor (não usado)
+      formData.get('observacoes'),
+      userProfile.email,
+      'AGUARDANDO RETORNO', // status inicial fixo
+      '', // status_pendente_sugestao vazio inicialmente
+      '' // consultor_sugerido vazio inicialmente
     ];
-
     try {
       await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
@@ -728,32 +659,207 @@
       alert('Reunião agendada com sucesso!');
       formAgendamento.reset();
       await loadMeetings();
-      renderMeetings({view: currentView});
-    } catch(err) {
-      console.error('Erro ao salvar agendamento', err);
+      renderMeetings();
+    } catch (err) {
+      console.error(err);
       alert('Erro ao salvar na planilha.');
     }
   });
 
-  // Botão enviar WhatsApp (exemplo simples, pode melhorar)
-  btnWhats.addEventListener('click', () => {
-    const formData = new FormData(formAgendamento);
-    const empresa = formData.get('empresa');
-    const consultor = formData.get('consultor');
-    if(!empresa || !consultor) {
-      alert('Preencha pelo menos empresa e consultor para enviar WhatsApp');
+  btnClear.addEventListener('click', () => formAgendamento.reset());
+
+  // Preencher filtro mês opções para meses disponíveis nas reuniões
+  function populateFilterMonthOptions() {
+    const meses = new Set();
+    allMeetingsData.forEach(r => {
+      if (r.data_da_reuniao && r.data_da_reuniao.length >= 7) {
+        meses.add(r.data_da_reuniao.slice(0,7));
+      }
+    });
+    filterMonth.innerHTML = '<option value="">Todos os meses</option>';
+    Array.from(meses).sort().forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      filterMonth.appendChild(opt);
+    });
+  }
+  // Similar para gerente
+  function populateFilterMonthOptionsGerente() {
+    const meses = new Set();
+    allMeetingsData.forEach(r => {
+      if (r.data_da_reuniao && r.data_da_reuniao.length >= 7) {
+        meses.add(r.data_da_reuniao.slice(0,7));
+      }
+    });
+    filterMonthGerente.innerHTML = '<option value="">Todos os meses</option>';
+    Array.from(meses).sort().forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      filterMonthGerente.appendChild(opt);
+    });
+  }
+
+  filterDate.addEventListener('change', renderMeetings);
+  filterMonth.addEventListener('change', renderMeetings);
+  filterMonthGerente.addEventListener('change', renderGerenteCards);
+
+  // Exibir dados gerentes
+  function renderGerenteCards() {
+    telaGerentes.classList.remove('hidden');
+    painelReunioes.classList.add('hidden');
+    formAngela.classList.add('hidden');
+
+    // Filtra por mês
+    let dadosFiltrados = allMeetingsData;
+    if(filterMonthGerente.value) {
+      dadosFiltrados = dadosFiltrados.filter(r => r.data_da_reuniao && r.data_da_reuniao.startsWith(filterMonthGerente.value));
+    }
+
+    // Estatísticas
+    const total = dadosFiltrados.length;
+    const agendadas = dadosFiltrados.filter(r => r.status === 'AGUARDANDO RETORNO').length;
+    const fechadas = dadosFiltrados.filter(r => r.status === 'FECHADO').length;
+    const naoInteresse = dadosFiltrados.filter(r => r.status === 'NÃO TEVE INTERESSE').length;
+    const aguardandoPix = dadosFiltrados.filter(r => r.status === 'AGUARDANDO PIX').length;
+    const transferidas = dadosFiltrados.filter(r => r.status_pendente_sugestao === 'transferencia').length;
+
+    cardsGerente.innerHTML = `
+      <div class="card"><strong>Total reuniões:</strong> ${total}</div>
+      <div class="card"><strong>AGUARDANDO RETORNO:</strong> ${agendadas}</div>
+      <div class="card"><strong>FECHADO:</strong> ${fechadas}</div>
+      <div class="card"><strong>NÃO TEVE INTERESSE:</strong> ${naoInteresse}</div>
+      <div class="card"><strong>AGUARDANDO PIX:</strong> ${aguardandoPix}</div>
+      <div class="card"><strong>Transferidas (pendentes):</strong> ${transferidas}</div>
+      <button onclick="mostrarDetalhesGerente()">Exibir Detalhes</button>
+    `;
+    detalhesGerente.innerHTML = '';
+  }
+
+  // Mostrar detalhes filtrados para gerente
+  function mostrarDetalhesGerente() {
+    let dadosFiltrados = allMeetingsData;
+    if(filterMonthGerente.value) {
+      dadosFiltrados = dadosFiltrados.filter(r => r.data_da_reuniao && r.data_da_reuniao.startsWith(filterMonthGerente.value));
+    }
+    if(dadosFiltrados.length === 0) {
+      detalhesGerente.innerHTML = '<p>Nenhuma reunião para mostrar.</p>';
       return;
     }
-    const text = `Olá! Reunião agendada para a empresa *${empresa}* com o consultor *${consultor}*.`;
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    let html = '<h3>Detalhes das Reuniões:</h3>';
+    dadosFiltrados.forEach(r => {
+      html += `<div class="meeting-item">
+        <strong>${r.nome_da_empresa || '(sem empresa)'} - ${r.data_da_reuniao || ''} ${r.horario || ''}</strong><br/>
+        Status: ${r.status || ''} | Consultor: ${r.consultor || ''}<br/>
+        Contato: ${r.nome || ''} | Segmento: ${r.segmento || ''}<br/>
+        Observação: ${r.observacao || ''}<br/>
+      </div>`;
+    });
+    detalhesGerente.innerHTML = html;
+  }
+
+  // Setup da tela conforme usuário logado
+  function setupViewByEmail() {
+    const email = userProfile.email.toLowerCase();
+    btnSignIn.classList.add('hidden');
+    btnSignOut.classList.remove('hidden');
+    userEmailEl.textContent = email;
+
+    if(email === emailAngela.toLowerCase()) {
+      // Angela
+      currentView = 'angela';
+      formAngela.classList.remove('hidden');
+      painelReunioes.classList.remove('hidden');
+      painelTitulo.textContent = 'Reuniões agendadas por Angela';
+      painelSubtitulo.textContent = 'Hoje';
+      telaGerentes.classList.add('hidden');
+      selectUserContainer.classList.remove('hidden');
+
+      // Preencher selectUser
+      selectUser.innerHTML = `
+        <option value="angela" selected>Angela</option>
+        ${Object.entries(emailsConsultores).map(([e,n]) => `<option value="${n.toLowerCase()}">${n}</option>`).join('')}
+        <option value="gerente">Gerente</option>
+      `;
+
+      selectUser.value = 'angela';
+      currentConsultorName = null;
+    } else if(Object.keys(emailsConsultores).includes(email)) {
+      // Consultor
+      currentView = 'consultor';
+      currentConsultorName = emailsConsultores[email];
+      formAngela.classList.add('hidden');
+      painelReunioes.classList.remove('hidden');
+      painelTitulo.textContent = `Reuniões de ${currentConsultorName}`;
+      painelSubtitulo.textContent = '';
+      telaGerentes.classList.add('hidden');
+      selectUserContainer.classList.add('hidden');
+    } else if(email === emailAdmin.toLowerCase()) {
+      // Gerente / Admin
+      currentView = 'gerente';
+      formAngela.classList.add('hidden');
+      painelReunioes.classList.add('hidden');
+      telaGerentes.classList.remove('hidden');
+      selectUserContainer.classList.remove('hidden');
+
+      // Preencher selectUser para admin
+      selectUser.innerHTML = `
+        <option value="gerente" selected>Gerente</option>
+        <option value="angela">Angela</option>
+        ${Object.entries(emailsConsultores).map(([e,n]) => `<option value="${n.toLowerCase()}">${n}</option>`).join('')}
+      `;
+      selectUser.value = 'gerente';
+      currentConsultorName = null;
+      renderGerenteCards();
+    } else {
+      alert('Usuário não autorizado');
+      btnSignOut.click();
+    }
+  }
+
+  selectUser.addEventListener('change', () => {
+    const val = selectUser.value;
+    if(val === 'angela') {
+      currentView = 'angela';
+      formAngela.classList.remove('hidden');
+      painelReunioes.classList.remove('hidden');
+      painelTitulo.textContent = 'Reuniões agendadas por Angela';
+      painelSubtitulo.textContent = 'Hoje';
+      telaGerentes.classList.add('hidden');
+      currentConsultorName = null;
+      renderMeetings();
+    } else if(val === 'gerente') {
+      currentView = 'gerente';
+      formAngela.classList.add('hidden');
+      painelReunioes.classList.add('hidden');
+      telaGerentes.classList.remove('hidden');
+      currentConsultorName = null;
+      renderGerenteCards();
+    } else if(val && Object.values(emailsConsultores).map(c => c.toLowerCase()).includes(val)) {
+      currentView = 'consultor';
+      currentConsultorName = val.charAt(0).toUpperCase() + val.slice(1); // capitaliza
+      formAngela.classList.add('hidden');
+      painelReunioes.classList.remove('hidden');
+      painelTitulo.textContent = `Reuniões de ${currentConsultorName}`;
+      painelSubtitulo.textContent = '';
+      telaGerentes.classList.add('hidden');
+      renderMeetings();
+    } else {
+      formAngela.classList.add('hidden');
+      painelReunioes.classList.add('hidden');
+      telaGerentes.classList.add('hidden');
+      currentView = null;
+      currentConsultorName = null;
+    }
   });
 
-  // Inicializar APIs Google e preparar sistema
+  // Inicialização Google API
   window.onload = () => {
-    initTokenClient();
     initGapiClient();
+    initTokenClient();
   };
 </script>
+
 </body>
 </html>
