@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reuniões SouFácil</title>
+  <title>Reuniões — SouFácil</title>
   <style>
     :root{--accent:#007aff;--muted:#6b7280}
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial; background:#f3f6fb; margin:0; padding:24px; display:flex; justify-content:center}
@@ -21,7 +21,8 @@
     .muted{color:var(--muted);font-size:13px}
     .row{display:flex;gap:8px}
     .row > *{flex:1}
-    .list-item{padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.04);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+    .actions { display:flex; gap:8px; margin-top:12px; }
+    .btn-secondary { background:#eee; color:#111; }
   </style>
 </head>
 <body>
@@ -31,27 +32,21 @@
         <div class="logo">SF</div>
         <div>
           <h1>Reuniões — SouFácil</h1>
-          <div class="small">Autentique com Google para continuar</div>
+          <div class="small">Autentique com Google para gravar no Sheets / Calendar</div>
         </div>
       </div>
 
       <div style="display:flex; gap:10px; align-items:center">
         <div id="userEmail" class="muted">Não conectado</div>
         <button id="btnSignIn">Entrar com Google</button>
-        <button id="btnSignOut" style="display:none;background:#eee;color:#111">Sair</button>
+        <button id="btnSignOut" class="btn-secondary" style="display:none">Sair</button>
       </div>
     </header>
 
     <div class="cols">
-      <!-- Left: Form (Angela) -->
-      <div class="card" id="panelForm">
-        <div style="display:flex; justify-content:space-between; align-items:center">
-          <div>
-            <div class="small">Formulário de agendamento</div>
-            <strong>Angela</strong>
-          </div>
-          <div class="small" id="statusApi">API: desconectada</div>
-        </div>
+      <!-- Form -->
+      <div class="card">
+        <div><div class="small">Formulário de agendamento — Angela</div></div>
 
         <form id="formAgendamento" style="margin-top:12px">
           <label>Data do contato</label>
@@ -123,7 +118,7 @@
           </div>
 
           <label>Consultor</label>
-          <select name="consultor" required>
+          <select name="consultor" id="consultorSelect" required>
             <option value="">Selecione</option>
             <option value="5517992741145">Glaucia — +55 17 99274-1145</option>
             <option value="5517992021249">Leticia — +55 17 99202-1249</option>
@@ -131,89 +126,60 @@
             <option value="5517992739551">Gabriel — +55 17 99273-9551</option>
           </select>
 
-          <label>Observações / Devolutiva inicial</label>
+          <label>Observações</label>
           <textarea name="observacoes" rows="3" placeholder="Observações..."></textarea>
 
-          <div style="margin-top:12px; display:flex; gap:8px">
-            <button type="submit">Agendar e Enviar WhatsApp</button>
-            <button id="btnClear" type="button" style="background:#eee;color:#111">Limpar</button>
+          <div class="actions">
+            <button id="btnSalvar" type="button">💾 Salvar (Planilha)</button>
+            <button id="btnWhats" type="button">📲 Enviar WhatsApp (Comprovante)</button>
+            <button id="btnClear" type="button" class="btn-secondary">Limpar</button>
           </div>
         </form>
       </div>
 
-      <!-- Right: Painéis -->
+      <!-- Right: painel simples -->
       <div>
-        <div class="card" id="panelDashboard">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div><div class="small">Painel</div><strong id="panelTitle">Visão pública</strong></div>
-            <div class="small">Conectado: <span id="apiStatus">não</span></div>
-          </div>
-
+        <div class="card">
+          <div><div class="small">Painel</div><strong id="panelTitle">Visão</strong></div>
           <div style="margin-top:12px" id="panelsContent">
             <div class="small">Reuniões recentes</div>
             <div id="meetingsList" style="margin-top:10px"></div>
           </div>
         </div>
-
-        <div style="height:12px"></div>
-
-        <div class="card" id="panelActions" style="display:none">
-          <div class="small">Ações do consultor</div>
-          <div id="consultorActions" style="margin-top:8px"></div>
-        </div>
       </div>
     </div>
 
     <div style="height:12px"></div>
-    <div class="muted">Observação: não inclua o Client Secret em arquivos públicos.</div>
+    <div class="muted">Obs: substitua <code>YOUR_GOOGLE_API_KEY</code> pela sua API Key no código abaixo.</div>
   </div>
 
-  <!-- Google JS libs -->
+  <!-- libs -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
 
   <script>
-  // ========== CONFIG ==========
-  const GOOGLE_CLIENT_ID = '689575420157-di4d81kgeo6tnaf70edsi6sii5523sev.apps.googleusercontent.com'; // seu Client ID (já inserido)
-  const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'; // <--- substitua pela sua API KEY
-  const SHEET_ID = '1-kcIEyUDiBWcGEUKxqotqlpyT-hIta5k3Cx1_mFEUIg'; // sua planilha
-  const SHEET_RANGE = 'Sheet1!A1:Z9999'; // ajuste se a aba tiver outro nome
-  // ============================
-
-  // listas de permissões por e-mail
-  const EMAILS = {
-    angela: ['angelagouveia70@gmail.com'],
-    consultores: [
-      'glauciacomercial231@gmail.com',
-      'marcelocomercialsoufacil@gmail.com',
-      'leticiasoufacil@gmail.com',
-      'gabrieldsoufacil@gmail.com'
-    ],
-    gerentes: [
-      'felipesoufacil@gmail.com',
-      'gerentecomercialsoufacil@gmail.com'
-    ]
-  };
-
-  // estado local
-  let tokenClient;
-  let gapiInited = false;
-  let userProfile = null;
-  let meetings = []; // cache lido da planilha
+  // CONFIG - insira sua API KEY abaixo
+  const GOOGLE_CLIENT_ID = '689575420157-di4d81kgeo6tnaf70edsi6sii5523sev.apps.googleusercontent.com';
+  const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'; // <- coloque sua API key aqui
+  const SHEET_ID = '1-kcIEyUDiBWcGEUKxqotqlpyT-hIta5k3Cx1_mFEUIg';
+  const SHEET_RANGE = 'Sheet1!A1:Z9999';
 
   // DOM
   const btnSignIn = document.getElementById('btnSignIn');
   const btnSignOut = document.getElementById('btnSignOut');
   const userEmailEl = document.getElementById('userEmail');
-  const statusApiEl = document.getElementById('statusApi');
-  const apiStatus = document.getElementById('apiStatus');
-  const panelTitle = document.getElementById('panelTitle');
+  const btnSalvar = document.getElementById('btnSalvar');
+  const btnWhats = document.getElementById('btnWhats');
+  const btnClear = document.getElementById('btnClear');
   const meetingsListEl = document.getElementById('meetingsList');
-  const panelActions = document.getElementById('panelActions');
-  const consultorActions = document.getElementById('consultorActions');
 
-  // carrega gapi e init
-  function loadGapi(){
+  // state
+  let tokenClient;
+  let gapiInited = false;
+  let userProfile = null;
+
+  // init gapi when loaded
+  function initGapiClient(){
     gapi.load('client', async () => {
       try {
         await gapi.client.init({
@@ -224,16 +190,16 @@
           ]
         });
         gapiInited = true;
-        apiStatus.textContent = 'sim';
-        statusApiEl.textContent = 'ok';
-        console.log('gapi ready');
-      } catch(err) {
+        console.log('gapi initialized');
+        // try load meetings (will succeed only after auth for private data if needed)
+        loadMeetings().catch(()=>{/*ignore*/});
+      } catch (err) {
         console.error('gapi init error', err);
-        statusApiEl.textContent = 'erro';
       }
     });
   }
-  // init token client (one-tap / popup token)
+
+  // init token client
   function initTokenClient(){
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
@@ -241,74 +207,43 @@
       callback: (resp) => {
         if (resp.error) {
           console.error('token error', resp);
+          alert('Erro ao autenticar: ' + resp.error);
           return;
         }
-        // token recebido, agora pegamos perfil com id_token
-        google.accounts.oauth2.getTokenStatus && console.log('token ok');
-        // fetch profile (we'll use the ID token to decode email)
-        // simpler: use google.accounts.id to get basic profile on sign-in flow, but here we'll request userinfo
+        // get user info using access token
         fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + resp.access_token }})
-          .then(r => r.json())
-          .then(profile => {
+          .then(r=>r.json()).then(profile => {
             userProfile = profile;
             afterSignIn();
-            // load meetings on sign in
-            loadMeetings();
-          }).catch(e => console.error('userinfo err', e));
+            loadMeetings().catch(()=>{/*ignore*/});
+          }).catch(e => console.error(e));
       }
     });
   }
 
-  // sign in flow: request access token interactively
-  btnSignIn.addEventListener('click', async () => {
+  btnSignIn.addEventListener('click', () => {
     if (!tokenClient) initTokenClient();
-    tokenClient.requestAccessToken({prompt: 'consent'});
+    tokenClient.requestAccessToken({prompt:'consent'});
   });
-
   btnSignOut.addEventListener('click', () => {
     userProfile = null;
     userEmailEl.textContent = 'Não conectado';
     btnSignOut.style.display = 'none';
     btnSignIn.style.display = 'inline-block';
-    panelActions.style.display = 'none';
-    panelTitle.textContent = 'Visão pública';
-    meetingsListEl.innerHTML = '';
   });
 
-  // após autenticação: define função por e-mail
   function afterSignIn(){
     if(!userProfile) return;
-    const email = userProfile.email;
-    userEmailEl.textContent = email;
+    userEmailEl.textContent = userProfile.email;
     btnSignOut.style.display = 'inline-block';
     btnSignIn.style.display = 'none';
-
-    const role = getRoleByEmail(email);
-    panelTitle.textContent = roleToTitle(role);
-    if(role === 'consultor') panelActions.style.display = 'block';
-    else panelActions.style.display = 'none';
   }
 
-  function getRoleByEmail(email){
-    if(EMAILS.angela.includes(email)) return 'angela';
-    if(EMAILS.consultores.includes(email)) return 'consultor';
-    if(EMAILS.gerentes.includes(email)) return 'gerente';
-    return 'visitante';
-  }
-  function roleToTitle(role){
-    if(role==='angela') return 'Painel de Agendamento (Angela)';
-    if(role==='consultor') return 'Painel do Consultor';
-    if(role==='gerente') return 'Painel do Gestor';
-    return 'Visão pública';
-  }
-
-  // === Form submit handler ===
-  document.getElementById('formAgendamento').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if(!userProfile){ alert('Faça login com Google antes'); return; }
-
-    const fd = new FormData(e.target);
-    const data = {
+  // collect form values into object
+  function coletarDadosFormulario(){
+    const f = document.getElementById('formAgendamento');
+    const fd = new FormData(f);
+    return {
       data_contato: fd.get('data_contato') || '',
       empresa: fd.get('empresa') || '',
       cnpj: fd.get('cnpj') || '',
@@ -324,55 +259,62 @@
       horario: fd.get('horario') || '',
       consultor_number: fd.get('consultor') || '',
       observacoes: fd.get('observacoes') || '',
-      agendado_por: userProfile.email,
+      agendado_por: userProfile ? userProfile.email : 'anon',
       created_at: new Date().toISOString()
     };
+  }
 
-    try {
-      // 1) se Meet -> criar evento no Calendar e pegar meet link
-      let meetLink = '';
-      if (data.reuniao_tipo === 'Meet') {
-        meetLink = await createCalendarEventAndGetMeetLink(data);
-      }
+  // append to sheet (requires gapi initialized)
+  async function salvarNaPlanilha(d){
+    if(!gapiInited) throw new Error('APIs não inicializadas');
+    // Map columns — aqui definimos a ordem que será inserida na sua planilha
+    const row = [
+      d.created_at,
+      d.data_contato,
+      d.empresa,
+      d.cnpj,
+      d.qtd_lojas,
+      d.segmento,
+      d.uf,
+      d.prospeccao,
+      d.nome,
+      d.funcao,
+      d.contato,
+      d.reuniao_tipo,
+      d.data_reuniao,
+      d.horario,
+      consultorNumberToName(d.consultor_number),
+      d.consultor_number,
+      '', // meet link placeholder
+      d.observacoes,
+      d.agendado_por
+    ];
+    const params = { spreadsheetId: SHEET_ID, range: SHEET_RANGE, valueInputOption: 'RAW' };
+    const body = { values: [ row ] };
+    const resp = await gapi.client.sheets.spreadsheets.values.append(params, body);
+    return resp;
+  }
 
-      // 2) salvar na sheet
-      await appendRowToSheet([
-        data.created_at,
-        data.data_contato,
-        data.empresa,
-        data.cnpj,
-        data.qtd_lojas,
-        data.segmento,
-        data.uf,
-        data.prospeccao,
-        data.nome,
-        data.funcao,
-        data.contato,
-        data.reuniao_tipo,
-        data.data_reuniao,
-        data.horario,
-        consultorNumberToName(data.consultor_number),
-        data.consultor_number,
-        meetLink,
-        data.observacoes,
-        data.agendado_por
-      ]);
+  // send whatsapp: opens wa.me link with encoded message
+  function enviarWhatsapp(d, meetLink=''){
+    const name = consultorNumberToName(d.consultor_number);
+    let mensagem = `📅 Novo agendamento de reunião\n`;
+    mensagem += `🏢 Empresa: ${d.empresa}\n`;
+    mensagem += `📅 Data: ${d.data_reuniao} às ${d.horario}\n`;
+    mensagem += `👤 Contato: ${d.nome} (${d.funcao})\n`;
+    mensagem += `📞 Telefone: ${d.contato}\n`;
+    mensagem += `📌 Tipo: ${d.reuniao_tipo}\n`;
+    if(meetLink) mensagem += `🔗 Meet: ${meetLink}\n`;
+    mensagem += `🏷 Segmento: ${d.segmento} — UF: ${d.uf}\n`;
+    mensagem += `📝 Obs: ${d.observacoes || '-'}\n\n`;
+    mensagem += `Enviado por: ${d.agendado_por}`;
 
-      // 3) enviar whatsapp (abre nova aba)
-      const message = buildWhatsappMessage(data, meetLink);
-      const waUrl = `https://wa.me/${data.consultor_number}?text=${encodeURIComponent(message)}`;
-      window.open(waUrl, '_blank');
+    const numero = d.consultor_number.replace(/\D/g,'');
+    const waUrl = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+    window.open(waUrl, '_blank');
+  }
 
-      alert('Agendamento criado e mensagem aberta no WhatsApp.');
-      e.target.reset();
-      await loadMeetings();
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao agendar. Veja o console do navegador.');
-    }
-  });
-
-  // helper: nome do consultor por número
+  // helper map
   function consultorNumberToName(num){
     const map = {
       '5517992741145':'Glaucia',
@@ -383,130 +325,70 @@
     return map[num] || num;
   }
 
-  // monta a mensagem enviada ao consultor
-  function buildWhatsappMessage(data, meetLink){
-    let text = '📅 Novo agendamento de reunião%0A';
-    text += `🏢 Empresa: ${data.empresa}%0A`;
-    text += `📅 Data: ${data.data_reuniao} às ${data.horario}%0A`;
-    text += `👤 Contato: ${data.nome} (${data.funcao})%0A`;
-    text += `📞 Telefone: ${data.contato}%0A`;
-    text += `📌 Tipo: ${data.reuniao_tipo}%0A`;
-    if(meetLink) text += `🔗 Meet: ${meetLink}%0A`;
-    text += `🏷 Segmento: ${data.segmento} — UF: ${data.uf}%0A`;
-    text += `📝 Observações: ${data.observacoes || '-'}%0A`;
-    text += `%0A Enviado por: ${data.agendado_por}`;
-    return decodeURIComponent(text); // wa.me supports encoded text but we'll open with encodeURIComponent outside
-  }
+  // Handlers for the two buttons
+  btnSalvar.addEventListener('click', async () => {
+    if(!userProfile){ alert('Faça login com Google antes de salvar.'); return; }
+    const dados = coletarDadosFormulario();
+    try {
+      await salvarNaPlanilha(dados);
+      alert('Salvo na planilha com sucesso.');
+      loadMeetings().catch(()=>{/*ignore*/});
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar — veja console.');
+    }
+  });
 
-  // === Sheets: append row ===
-  async function appendRowToSheet(values){
-    if(!gapiInited) throw new Error('gapi não inicializado');
-    const params = {
-      spreadsheetId: SHEET_ID,
-      range: SHEET_RANGE,
-      valueInputOption: 'RAW'
-    };
-    const resource = { values: [values] };
-    const res = await gapi.client.sheets.spreadsheets.values.append(params, resource);
-    return res;
-  }
+  btnWhats.addEventListener('click', async () => {
+    const dados = coletarDadosFormulario();
+    // opcional: se quiser garantir que já foi salvo antes de enviar, descomente:
+    // await salvarNaPlanilha(dados);
+    // se quiser criar meet antes de enviar (quando tipo=Meet), poderíamos chamar createCalendarEvent...
+    enviarWhatsapp(dados, '');
+  });
 
-  // === Calendar: create event with Meet link ===
-  async function createCalendarEventAndGetMeetLink(data){
-    if(!gapiInited) throw new Error('gapi não inicializado');
-    // build start/end in RFC3339 using local date/time (assumes user local tz)
-    const start = new Date(`${data.data_reuniao}T${data.horario}`);
-    const end = new Date(start.getTime() + 30*60000); // 30 min default
-    const event = {
-      summary: `Reunião - ${data.empresa}`,
-      description: `Contato: ${data.nome} - ${data.funcao}\\nAgendado por: ${data.agendado_por}\\nObs: ${data.observacoes}`,
-      start: { dateTime: start.toISOString() },
-      end: { dateTime: end.toISOString() },
-      attendees: [{email: userProfile.email}], // optional
-      conferenceData: {
-        createRequest: {
-          requestId: `meet-${Math.random().toString(36).slice(2,9)}`,
-          conferenceSolutionKey: { type: "hangoutsMeet" }
-        }
-      }
-    };
-    // Need to call with conferenceDataVersion=1 and proper scope
-    const request = gapi.client.calendar.events.insert({
-      calendarId: 'primary',
-      resource: event,
-      conferenceDataVersion: 1
-    });
-    const resp = await request;
-    // Meet link path: resp.result.conferenceData.entryPoints[0].uri (or use hangoutLink)
-    const conf = resp.result.conferenceData;
-    let link = '';
-    if(conf && conf.entryPoints && conf.entryPoints.length) link = conf.entryPoints[0].uri;
-    if(!link && resp.result.hangoutLink) link = resp.result.hangoutLink;
-    return link;
-  }
+  btnClear.addEventListener('click', () => document.getElementById('formAgendamento').reset());
 
-  // === Load meetings from sheet (simple read) ===
+  // Load meetings (read sheet) to show recent in panel
   async function loadMeetings(){
     if(!gapiInited) return;
     try {
-      const res = await gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: SHEET_RANGE
-      });
+      const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: SHEET_RANGE });
       const rows = res.result.values || [];
-      if(rows.length < 2){ meetings = []; renderMeetings([]); return; }
+      if(rows.length < 2){ meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião registrada</div>'; return; }
       const header = rows[0];
       const data = rows.slice(1).map(r => {
         const obj = {};
         header.forEach((h,i)=> obj[h] = r[i] || '');
         return obj;
       });
-      meetings = data.reverse().slice(0,30); // most recent 30
-      renderMeetings(meetings);
-    } catch(err) {
-      console.error('loadMeetings err', err);
+      // show 10 most recent
+      meetingsListEl.innerHTML = '';
+      data.slice(-10).reverse().forEach(row => {
+        const d = document.createElement('div');
+        d.style.padding = '8px';
+        d.style.borderBottom = '1px solid #f1f3f6';
+        d.innerHTML = `<strong>${row[2]||row['Empresa']||row['empresa']||''}</strong>
+                       <div class="muted">${row[12]||row['data_reuniao']||''} ${row[13]||row['horario']||''} — ${row[14]||row['consultor']||''}</div>`;
+        meetingsListEl.appendChild(d);
+      });
+    } catch (err) {
+      console.error('loadMeetings error', err);
     }
   }
 
-  function renderMeetings(list){
-    meetingsListEl.innerHTML = '';
-    if(!list.length){ meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião registrada</div>'; return; }
-    const role = userProfile ? getRoleByEmail(userProfile.email) : 'visitante';
-    list.forEach((m, idx) => {
-      const div = document.createElement('div');
-      div.className = 'list-item';
-      const left = document.createElement('div');
-      left.innerHTML = `<div style="font-weight:600">${m['Empresa'] || m['empresa'] || m['Empresa / Cliente'] || ''} — ${m['Consultor'] || m['consultor'] || ''}</div>
-                        <div class="muted">${m['Data da Reunião'] || m['data_reuniao'] || m['Data'] || ''} ${m['Horário'] || m['horario'] || ''}</div>`;
-      const right = document.createElement('div');
-      if(role === 'consultor' && EMAILS.consultores.includes(userProfile.email)){
-        const btnDone = document.createElement('button');
-        btnDone.textContent = 'Marcar feita';
-        btnDone.onclick = () => markAsDoneInSheet(m);
-        right.appendChild(btnDone);
-      } else {
-        right.innerHTML = `<div class="small">${(m['Status'] || m['status'] || '')}</div>`;
-      }
-      div.appendChild(left); div.appendChild(right);
-      meetingsListEl.appendChild(div);
-    });
-  }
-
-  // mark as done -> simple flow: append a new column with status (this is a quick approach)
-  async function markAsDoneInSheet(rowObj){
-    alert('Para marcar como feita, abra a planilha e atualize a linha (implementação simples por enquanto).');
-    // For a production flow we should store row index in the sheet and update that specific row using update API.
-  }
-
-  // init
+  // init on load
   window.onload = () => {
-    loadGapi();
-    // init tokenclient when GSI lib loaded
-    setTimeout(() => { initTokenClient(); }, 1000);
+    // wait for gapi library to be available
+    const waitGapi = setInterval(() => {
+      if(window.gapi && window.google){
+        clearInterval(waitGapi);
+        initGapiClient();
+        initTokenClient();
+      }
+    }, 300);
   };
 
-  // clear button
-  document.getElementById('btnClear').addEventListener('click', () => document.getElementById('formAgendamento').reset());
   </script>
 </body>
 </html>
