@@ -30,6 +30,7 @@
     .meeting-header button { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 5px 10px; cursor: pointer; flex-shrink: 0; }
     .meeting-details { padding: 8px 12px; background: #f9fbff; border-radius: 8px; margin-top: 6px; display: none; font-size: 14px; }
     .meeting-details p { margin: 4px 0; }
+    #filterAngelaDate { margin-top: 24px; margin-bottom: 8px; width: 100%; }
   </style>
 </head>
 <body>
@@ -149,8 +150,14 @@
         <div class="card">
           <div><div class="small">Painel</div><strong id="panelTitle">Visão</strong></div>
           <div style="margin-top:12px" id="panelsContent">
-            <div class="small">Reuniões recentes</div>
+            <div class="small">Reuniões recentes (hoje)</div>
             <div id="meetingsList" style="margin-top:10px"></div>
+
+            <!-- Novo filtro Angela -->
+            <label for="filterAngelaDate" class="small" style="margin-top:20px; display:block;">Filtrar reuniões agendadas pela Angela por data</label>
+            <input type="date" id="filterAngelaDate" />
+
+            <div id="meetingsAngelaList" style="margin-top:10px"></div>
           </div>
         </div>
       </div>
@@ -165,13 +172,11 @@
   <script src="https://apis.google.com/js/api.js" async defer></script>
 
   <script>
-  // CONFIG - insira sua API KEY abaixo
   const GOOGLE_CLIENT_ID = '689575420157-di4d81kgeo6tnaf70edsi6sii5523sev.apps.googleusercontent.com';
   const GOOGLE_API_KEY = 'AIzaSyAiU6bMImfPaQLJj8nVO4V0Je67sSyvGTo';
   const SHEET_ID = '1-kcIEyUDiBWcGEUKxqotqlpyT-hIta5k3Cx1_mFEUIg';
   const SHEET_RANGE = 'Sheet1!A1:Z9999';
 
-  // DOM
   const btnSignIn = document.getElementById('btnSignIn');
   const btnSignOut = document.getElementById('btnSignOut');
   const userEmailEl = document.getElementById('userEmail');
@@ -179,13 +184,14 @@
   const btnWhats = document.getElementById('btnWhats');
   const btnClear = document.getElementById('btnClear');
   const meetingsListEl = document.getElementById('meetingsList');
+  const meetingsAngelaListEl = document.getElementById('meetingsAngelaList');
+  const filterAngelaDateEl = document.getElementById('filterAngelaDate');
 
-  // state
   let tokenClient;
   let gapiInited = false;
   let userProfile = null;
+  let allMeetingsData = []; // guardamos todo para filtro depois
 
-  // init gapi when loaded
   function initGapiClient(){
     gapi.load('client', async () => {
       try {
@@ -198,14 +204,13 @@
         });
         gapiInited = true;
         console.log('gapi initialized');
-        loadMeetings().catch(()=>{/*ignore*/});
+        await loadMeetings();
       } catch (err) {
         console.error('gapi init error', err);
       }
     });
   }
 
-  // init token client
   function initTokenClient(){
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
@@ -244,7 +249,6 @@
     btnSignIn.style.display = 'none';
   }
 
-  // collect form values into object
   function coletarDadosFormulario(){
     const f = document.getElementById('formAgendamento');
     const fd = new FormData(f);
@@ -269,7 +273,6 @@
     };
   }
 
-  // append to sheet (requires gapi initialized)
   async function salvarNaPlanilha(d){
     if(!gapiInited) throw new Error('APIs não inicializadas');
     const row = [
@@ -289,7 +292,7 @@
       d.horario,
       consultorNumberToName(d.consultor_number),
       d.consultor_number,
-      '', // meet link placeholder
+      '',
       d.observacoes,
       d.agendado_por
     ];
@@ -299,7 +302,6 @@
     return resp;
   }
 
-  // send whatsapp: opens wa.me link with encoded message (no emojis)
   function enviarWhatsapp(d, meetLink=''){
     const name = consultorNumberToName(d.consultor_number);
     let mensagem = 'Novo agendamento de reunião\n';
@@ -318,7 +320,6 @@
     window.open(waUrl, '_blank');
   }
 
-  // helper map
   function consultorNumberToName(num){
     const map = {
       '5517992741145':'Glaucia',
@@ -329,14 +330,13 @@
     return map[num] || num;
   }
 
-  // Handlers for the two buttons
   btnSalvar.addEventListener('click', async () => {
     if(!userProfile){ alert('Faça login com Google antes de salvar.'); return; }
     const dados = coletarDadosFormulario();
     try {
       await salvarNaPlanilha(dados);
       alert('Salvo na planilha com sucesso.');
-      loadMeetings().catch(()=>{/*ignore*/});
+      await loadMeetings();
       document.getElementById('formAgendamento').reset();
     } catch (err) {
       console.error(err);
@@ -351,7 +351,6 @@
 
   btnClear.addEventListener('click', () => document.getElementById('formAgendamento').reset());
 
-  // Função para normalizar o header da planilha em chaves JS amigáveis
   function normalizeHeader(header){
     return header.toLowerCase()
       .trim()
@@ -360,7 +359,6 @@
       .replace(/[\u0300-\u036f]/g, "");
   }
 
-  // Load meetings (read sheet) to show recent in panel
   async function loadMeetings(){
     if(!gapiInited) return;
     try {
@@ -368,91 +366,119 @@
       const rows = res.result.values || [];
       if(rows.length < 2){
         meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião registrada</div>';
+        meetingsAngelaListEl.innerHTML = '';
+        allMeetingsData = [];
         return;
       }
       const headerRaw = rows[0];
       const header = headerRaw.map(normalizeHeader);
 
-      const data = rows.slice(1).map(r => {
+      allMeetingsData = rows.slice(1).map(r => {
         const obj = {};
         header.forEach((h,i) => obj[h] = r[i] || '');
         return obj;
       });
 
-      // filtrar só reuniões de hoje
+      // Mostrar reuniões do dia de hoje (painel principal)
       const hojeStr = new Date().toISOString().slice(0,10);
 
-      const reunioesHoje = data.filter(row => row['data_da_reuniao'] === hojeStr);
+      const reunioesHoje = allMeetingsData.filter(row => row['data_da_reuniao'] === hojeStr);
 
-      // ordenar por horário
-      reunioesHoje.sort((a,b) => {
-        if(a['horario'] < b['horario']) return -1;
-        if(a['horario'] > b['horario']) return 1;
-        return 0;
-      });
+      reunioesHoje.sort((a,b) => (a['horario'] < b['horario'] ? -1 : (a['horario'] > b['horario'] ? 1 : 0)));
 
       if(reunioesHoje.length === 0){
         meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião marcada para hoje</div>';
-        return;
+      } else {
+        meetingsListEl.innerHTML = '';
+        reunioesHoje.forEach((row, index) => {
+          meetingsListEl.appendChild(createMeetingElement(row, index));
+        });
       }
 
-      meetingsListEl.innerHTML = '';
-
-      reunioesHoje.forEach((row, index) => {
-        const div = document.createElement('div');
-        div.className = 'meeting-item';
-
-        const consultorNome = consultorNumberToName(row['numero_do_consultor']);
-
-        div.innerHTML = `
-          <div class="meeting-header">
-            <strong>${row['nome_da_empresa'] || '-'}</strong>
-            <div class="muted">${row['horario']} — ${consultorNome}</div>
-            <button type="button" aria-expanded="false" aria-controls="details-${index}">Abrir informações</button>
-          </div>
-          <div class="meeting-details" id="details-${index}">
-            <p><strong>CNPJ:</strong> ${row['cnpj'] || '-'}</p>
-            <p><strong>Quantidade de lojas:</strong> ${row['quantidade_de_lojas'] || '-'}</p>
-            <p><strong>Segmento:</strong> ${row['segmento'] || '-'}</p>
-            <p><strong>UF:</strong> ${row['uf'] || '-'}</p>
-            <p><strong>Prospecção:</strong> ${row['prospeccao'] || '-'}</p>
-            <p><strong>Nome do contato:</strong> ${row['nome'] || '-'}</p>
-            <p><strong>Função:</strong> ${row['funcao'] || '-'}</p>
-            <p><strong>Contato:</strong> ${row['contato'] || '-'}</p>
-            <p><strong>Tipo de reunião:</strong> ${row['reuniao'] || '-'}</p>
-            <p><strong>Data da reunião:</strong> ${row['data_da_reuniao'] || '-'}</p>
-            <p><strong>Horário:</strong> ${row['horario'] || '-'}</p>
-            <p><strong>Consultor:</strong> ${consultorNome}</p>
-            <p><strong>Observações:</strong> ${row['observacao'] || '-'}</p>
-            <p><strong>Email de quem mandou:</strong> ${row['email_de_quem_mandou'] || '-'}</p>
-          </div>
-        `;
-
-        // botão para abrir/fechar detalhes
-        const btn = div.querySelector('button');
-        const details = div.querySelector('.meeting-details');
-        btn.addEventListener('click', () => {
-          const expanded = btn.getAttribute('aria-expanded') === 'true';
-          btn.setAttribute('aria-expanded', String(!expanded));
-          if(expanded){
-            details.style.display = 'none';
-            btn.textContent = 'Abrir informações';
-          } else {
-            details.style.display = 'block';
-            btn.textContent = 'Fechar informações';
-          }
-        });
-
-        meetingsListEl.appendChild(div);
-      });
+      // Limpar filtro Angela ao carregar dados
+      filterAngelaDateEl.value = '';
+      meetingsAngelaListEl.innerHTML = '';
 
     } catch (err) {
       console.error('loadMeetings error', err);
       meetingsListEl.innerHTML = '<div class="muted">Erro ao carregar reuniões.</div>';
+      meetingsAngelaListEl.innerHTML = '';
     }
   }
 
-  // init on load
+  function createMeetingElement(row, index){
+    const div = document.createElement('div');
+    div.className = 'meeting-item';
+
+    const consultorNome = consultorNumberToName(row['numero_do_consultor']);
+
+    div.innerHTML = `
+      <div class="meeting-header">
+        <strong>${row['nome_da_empresa'] || '-'}</strong>
+        <div class="muted">${row['horario'] || '-'} — ${consultorNome}</div>
+        <button type="button" aria-expanded="false" aria-controls="details-${index}">Abrir informações</button>
+      </div>
+      <div class="meeting-details" id="details-${index}">
+        <p><strong>CNPJ:</strong> ${row['cnpj'] || '-'}</p>
+        <p><strong>Quantidade de lojas:</strong> ${row['quantidade_de_lojas'] || '-'}</p>
+        <p><strong>Segmento:</strong> ${row['segmento'] || '-'}</p>
+        <p><strong>UF:</strong> ${row['uf'] || '-'}</p>
+        <p><strong>Prospecção:</strong> ${row['prospeccao'] || '-'}</p>
+        <p><strong>Nome do contato:</strong> ${row['nome'] || '-'}</p>
+        <p><strong>Função:</strong> ${row['funcao'] || '-'}</p>
+        <p><strong>Contato:</strong> ${row['contato'] || '-'}</p>
+        <p><strong>Tipo de reunião:</strong> ${row['reuniao'] || '-'}</p>
+        <p><strong>Data da reunião:</strong> ${row['data_da_reuniao'] || '-'}</p>
+        <p><strong>Horário:</strong> ${row['horario'] || '-'}</p>
+        <p><strong>Consultor:</strong> ${consultorNome}</p>
+        <p><strong>Observações:</strong> ${row['observacao'] || '-'}</p>
+        <p><strong>Email de quem mandou:</strong> ${row['email_de_quem_mandou'] || '-'}</p>
+      </div>
+    `;
+
+    const btn = div.querySelector('button');
+    const details = div.querySelector('.meeting-details');
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      if(expanded){
+        details.style.display = 'none';
+        btn.textContent = 'Abrir informações';
+      } else {
+        details.style.display = 'block';
+        btn.textContent = 'Fechar informações';
+      }
+    });
+
+    return div;
+  }
+
+  // Função para filtrar reuniões agendadas pela Angela na data selecionada
+  filterAngelaDateEl.addEventListener('change', () => {
+    const val = filterAngelaDateEl.value;
+    if(!val) {
+      meetingsAngelaListEl.innerHTML = '';
+      return;
+    }
+
+    // filtrar só as reuniões agendadas por Angela (email contendo "angela") e na data selecionada
+    const filtradas = allMeetingsData.filter(row => {
+      return row['email_de_quem_mandou']?.toLowerCase().includes('angela') && row['data_da_reuniao'] === val;
+    });
+
+    filtradas.sort((a,b) => (a['horario'] < b['horario'] ? -1 : (a['horario'] > b['horario'] ? 1 : 0)));
+
+    if(filtradas.length === 0){
+      meetingsAngelaListEl.innerHTML = '<div class="muted">Nenhuma reunião agendada pela Angela nesta data.</div>';
+      return;
+    }
+
+    meetingsAngelaListEl.innerHTML = '';
+    filtradas.forEach((row, idx) => {
+      meetingsAngelaListEl.appendChild(createMeetingElement(row, `angela-${idx}`));
+    });
+  });
+
   window.onload = () => {
     const waitGapi = setInterval(() => {
       if(window.gapi && window.google){
