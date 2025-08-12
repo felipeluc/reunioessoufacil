@@ -23,6 +23,13 @@
     .row > *{flex:1}
     .actions { display:flex; gap:8px; margin-top:12px; }
     .btn-secondary { background:#eee; color:#111; }
+    .meeting-card { padding:10px; border-radius:8px; border:1px solid #f1f3f6; margin-bottom:8px; background:#fff;}
+    .meeting-meta { color:var(--muted); font-size:13px; margin-top:6px;}
+    .details { margin-top:8px; background:#f8fbff; padding:10px; border-radius:8px; font-size:13px; display:none;}
+    .detail-row { margin-bottom:6px;}
+    .open-btn { background:#007aff; padding:6px 10px; border-radius:6px; color:#fff; cursor:pointer; border:none; }
+    .no-meet { color:var(--muted); }
+    pre.json { background:#f1f5f9; padding:8px; border-radius:6px; overflow:auto; font-size:12px;}
   </style>
 </head>
 <body>
@@ -158,7 +165,7 @@
   <script src="https://apis.google.com/js/api.js" async defer></script>
 
   <script>
-  // CONFIG - insira sua API KEY abaixo
+  // CONFIG - insira sua API KEY abaixo (estes valores vinham no seu código enviado)
   const GOOGLE_CLIENT_ID = '689575420157-di4d81kgeo6tnaf70edsi6sii5523sev.apps.googleusercontent.com';
   const GOOGLE_API_KEY = 'AIzaSyAiU6bMImfPaQLJj8nVO4V0Je67sSyvGTo';
   const SHEET_ID = '1-kcIEyUDiBWcGEUKxqotqlpyT-hIta5k3Cx1_mFEUIg';
@@ -343,31 +350,167 @@
 
   btnClear.addEventListener('click', () => document.getElementById('formAgendamento').reset());
 
-  // Load meetings (read sheet) to show recent in panel
+  // Normaliza nomes de cabeçalho da planilha para chaves consistentes
+  function normalizeHeader(h){
+    if(!h) return '';
+    return String(h).trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  }
+
+  // Tenta transformar várias representações de data em YYYY-MM-DD
+  function toISODate(v){
+    if(!v) return '';
+    v = String(v).trim();
+    // Já no formato ISO
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+    // dd/mm/yyyy ou dd-mm-yyyy
+    m = v.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
+    if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+    // tenta Date
+    const d = new Date(v);
+    if(!isNaN(d)) return d.toISOString().split('T')[0];
+    return '';
+  }
+
+  function timeToMinutes(t){
+    if(!t) return 24*60;
+    const s = String(t).trim();
+    const m = s.match(/(\d{1,2}):(\d{2})/);
+    if(m) return parseInt(m[1],10)*60 + parseInt(m[2],10);
+    // se for HHMM (ex: 0900)
+    const mm = s.match(/^(\d{3,4})$/);
+    if(mm){
+      const str = mm[1];
+      const h = str.length === 3 ? parseInt(str[0],10) : parseInt(str.slice(0,2),10);
+      const min = str.length === 3 ? parseInt(str.slice(1),10) : parseInt(str.slice(2),10);
+      return h*60 + min;
+    }
+    return 24*60;
+  }
+
+  function prettifyKey(k){
+    if(!k) return '';
+    return String(k).replace(/_/g,' ').split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+  }
+
+  // Load meetings (read sheet) to show only today's, sorted by time
   async function loadMeetings(){
     if(!gapiInited) return;
     try {
+      meetingsListEl.innerHTML = '<div class="no-meet">Carregando reuniões...</div>';
       const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: SHEET_RANGE });
       const rows = res.result.values || [];
-      if(rows.length < 2){ meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião registrada</div>'; return; }
-      const header = rows[0];
+      if(rows.length < 2){
+        meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião registrada</div>';
+        return;
+      }
+
+      const header = rows[0].map(h => h || '');
+      const normalizedHeader = header.map(normalizeHeader);
+
       const data = rows.slice(1).map(r => {
         const obj = {};
-        header.forEach((h,i)=> obj[h] = r[i] || '');
+        normalizedHeader.forEach((key,i) => { obj[key] = r[i] || ''; });
         return obj;
       });
-      meetingsListEl.innerHTML = '';
-      data.slice(-10).reverse().forEach(row => {
-        const d = document.createElement('div');
-        d.style.padding = '8px';
-        d.style.borderBottom = '1px solid #f1f3f6';
-        d.innerHTML = `<strong>${row[2]||row['Empresa']||row['empresa']||''}</strong>
-                       <div class="muted">${row[12]||row['data_reuniao']||''} ${row[13]||row['horario']||''} — ${row[14]||row['consultor']||''}</div>`;
-        meetingsListEl.appendChild(d);
+
+      // data de hoje em ISO
+      const hoje = new Date().toISOString().split('T')[0];
+
+      // campos possíveis que armazenem a data no seu sheet
+      const dateKeysCandidates = ['data_reuniao','datareuniao','data','data_da_reuniao','datadareuniao'];
+
+      const meetingsHoje = data.filter(row => {
+        const dateVal = dateKeysCandidates.map(k => row[k]).find(Boolean);
+        const iso = toISODate(dateVal || '');
+        return iso === hoje;
       });
+
+      // ordenar por horário (tenta chaves diferentes)
+      meetingsHoje.sort((a,b) => {
+        const tA = a.horario || a.hora || a['horario_reuniao'] || '';
+        const tB = b.horario || b.hora || b['horario_reuniao'] || '';
+        return timeToMinutes(tA) - timeToMinutes(tB);
+      });
+
+      meetingsListEl.innerHTML = '';
+      if(meetingsHoje.length === 0){
+        meetingsListEl.innerHTML = '<div class="muted">Nenhuma reunião para hoje</div>';
+        return;
+      }
+
+      meetingsHoje.forEach((r, idx) => {
+        const id = 'meet-' + idx + '-' + Math.random().toString(36).slice(2,8);
+        const company = r.empresa || r.nome_da_empresa || r['nome'] || r.company || '-';
+        const horario = r.horario || r.hora || '-';
+        // tenta pegar data para exibição e formata dd/mm/yyyy
+        const rawDate = dateKeysCandidates.map(k => r[k]).find(Boolean) || '';
+        const isoDate = toISODate(rawDate);
+        const displayDate = isoDate ? isoDate.split('-').reverse().join('/') : (rawDate || '-');
+        // tenta pegar consultor (nome ou número)
+        const consultor = r.consultor || r.consultor_nome || r.consultor_name || consultorNumberToName(r.consultor_number || r.consultor || '');
+
+        const card = document.createElement('div');
+        card.className = 'meeting-card';
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>${escapeHtml(company)}</strong>
+              <div class="meeting-meta">${escapeHtml(horario)} — ${escapeHtml(displayDate)} — ${escapeHtml(consultor)}</div>
+            </div>
+            <div>
+              <button class="open-btn" data-target="${id}">Abrir informações</button>
+            </div>
+          </div>
+          <div id="${id}" class="details" aria-hidden="true"></div>
+        `;
+
+        meetingsListEl.appendChild(card);
+
+        const detailsEl = card.querySelector('#' + id);
+
+        // preenche detalhes (exibe todas as chaves não vazias)
+        const keys = Object.keys(r);
+        let html = '';
+        keys.forEach(k => {
+          const v = r[k];
+          if(v === undefined || v === null || String(v).trim() === '') return;
+          let valueToShow = v;
+          // se for número do consultor, mostra nome também
+          if(k.includes('consultor') && /^\d{10,}$/.test(String(v).replace(/\D/g,''))){
+            const name = consultorNumberToName(String(v).replace(/\D/g,''));
+            valueToShow = `${v} (${name})`;
+          }
+          html += `<div class="detail-row"><strong>${escapeHtml(prettifyKey(k))}:</strong> ${escapeHtml(String(valueToShow))}</div>`;
+        });
+
+        if(!html) html = '<div class="muted">Nenhuma informação adicional</div>';
+
+        detailsEl.innerHTML = html;
+
+        // toggle
+        const btn = card.querySelector('.open-btn');
+        btn.addEventListener('click', () => {
+          const showing = detailsEl.style.display !== 'none' && detailsEl.style.display !== '';
+          detailsEl.style.display = showing ? 'none' : 'block';
+          detailsEl.setAttribute('aria-hidden', showing ? 'true' : 'false');
+          btn.textContent = showing ? 'Abrir informações' : 'Fechar informações';
+        });
+      });
+
     } catch (err) {
       console.error('loadMeetings error', err);
+      meetingsListEl.innerHTML = '<div class="muted">Erro ao carregar reuniões (ver console)</div>';
     }
+  }
+
+  // small helper to escape HTML to avoid injeção na visualização
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
   // init on load
