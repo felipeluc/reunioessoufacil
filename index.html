@@ -1,759 +1,319 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Reuniões SouFácil - Sistema</title>
-<style>
-  :root {--accent:#007aff;--muted:#6b7280}
-  body {font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial; background:#f3f6fb; margin:0; padding:24px; display:flex; justify-content:center;}
-  .app {width:1100px; max-width:96%; background:linear-gradient(180deg,#fff,#fbfdff); border-radius:14px; box-shadow:0 10px 30px rgba(18,38,63,0.08); padding:20px;}
-  header {display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
-  .brand {display:flex; gap:12px; align-items:center;}
-  .logo {width:48px; height:48px; background:linear-gradient(135deg,#007aff,#4cc3ff); border-radius:12px; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700;}
-  h1 {font-size:18px; margin:0;}
-  .small {color:var(--muted); font-size:13px;}
-  select,input,textarea,button {font-size:14px; border-radius:8px;}
-  label {display:block; font-size:13px; color:#333; margin-top:10px;}
-  input,select,textarea {width:100%; padding:10px; border:1px solid #e6e9ef; margin-top:6px;}
-  button {background:var(--accent); color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;}
-  .btn-secondary {background:#eee; color:#111;}
-  .card {background:#fff; border-radius:12px; padding:14px; box-shadow:0 6px 18px rgba(15,30,60,0.04); margin-bottom: 20px;}
-  .muted {color:var(--muted); font-size:13px;}
-  .meeting-item {border-bottom: 1px solid #eee; padding: 8px 0;}
-  .meeting-header {display: flex; align-items: center; gap: 12px; flex-wrap: wrap;}
-  .meeting-header strong {flex-grow: 1;}
-  .meeting-header .muted {font-size: 13px; color: var(--muted);}
-  .meeting-header button {background: var(--accent); color: white; border: none; border-radius: 8px; padding: 5px 10px; cursor: pointer; flex-shrink: 0;}
-  .meeting-details {padding: 8px 12px; background: #f9fbff; border-radius: 8px; margin-top: 6px; display: none; font-size: 14px;}
-  .meeting-details p {margin: 4px 0;}
-  #selectUser, #filterMonth {margin-bottom: 12px;}
-  .actions {display: flex; gap: 6px; margin-top: 8px;}
-  .actions button {padding: 5px 10px; font-size: 13px;}
-  .hidden {display:none;}
-  .error {color: red; margin-top: 10px;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Reuniões</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; margin:0; padding:0; background:#f7f7f7; }
+    .hidden { display:none; }
+    #painelReunioes { padding:20px; }
+    .meeting { border:1px solid #ccc; padding:10px; margin-bottom:10px; border-radius:8px; background:#fff; }
+    label { display:block; margin-top:10px; }
+    input, select, textarea, button { padding:5px; margin-top:5px; width:100%; box-sizing:border-box; }
+    button { cursor:pointer; margin-top:10px; }
+    #formAngela { margin-bottom:20px; background:#fff; padding:15px; border-radius:8px; }
+    #modalEdit { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; }
+    #modalEditContent { background:#fff; padding:20px; border-radius:8px; width:400px; }
+  </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <div class="brand">
-      <div class="logo">SF</div>
-      <div>
-        <h1>Reuniões SouFácil - Sistema</h1>
-        <div class="small" id="userEmail">Não conectado</div>
-      </div>
-    </div>
-    <div style="display:flex; gap:10px; align-items:center;">
-      <select id="selectUser" class="hidden" title="Selecionar tela para visualização"></select>
-      <button id="btnSignIn">Entrar com Google</button>
-      <button id="btnSignOut" class="btn-secondary hidden">Sair</button>
-    </div>
-  </header>
 
-  <!-- Área para formulário Angela -->
-  <div id="formAngela" class="card hidden">
-    <div><div class="small">Formulário de agendamento — Angela</div></div>
-    <form id="formAgendamento" style="margin-top:12px">
-      <label>Data do contato</label><input type="date" name="data_contato" required>
-      <label>Nome da empresa</label><input type="text" name="empresa" required>
-      <label>CNPJ</label><input type="text" name="cnpj" placeholder="00.000.000/0000-00">
-      <label>Quantidade de lojas</label><input type="number" name="qtd_lojas" min="0">
-      <label>Segmento</label>
-      <select name="segmento" required>
-        <option value="">Selecione</option>
-        <option>Móveis</option><option>Óticas</option><option>Roupas</option><option>Calçados</option>
-        <option>Celular</option><option>Mercado</option><option>Farmácia</option><option>Eletro</option>
-        <option>Utilidades</option><option>Distribuidora</option><option>Clínica</option><option>Conveniência</option>
-      </select>
-      <label>UF</label>
-      <select name="uf" required>
-        <option value="">Selecione</option>
-        <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
-        <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
-        <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
-        <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
-        <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
-        <option>SP</option><option>TO</option>
-      </select>
-      <label>Prospecção</label>
-      <select name="prospeccao" required>
-        <option value="">Selecione</option>
-        <option>Leads</option><option>Internet</option><option>Indicação</option><option>Ligação</option><option>Visita</option><option>Já é cliente</option>
-      </select>
-      <label>Nome</label><input type="text" name="nome" required>
-      <label>Função</label>
-      <select name="funcao" required>
-        <option value="">Selecione</option>
-        <option>Funcionário</option><option>Vendedor</option><option>Proprietário</option><option>Gerente</option><option>Financeiro</option>
-      </select>
-      <label>Contato</label><input type="tel" name="contato" placeholder="+55 (DDD) 90000-0000" required>
-      <label>Reunião</label>
-      <select name="reuniao" id="tipoReuniao" required>
-        <option value="">Selecione</option>
-        <option value="Ligação">Ligação</option>
-        <option value="Whats">Whats</option>
-        <option value="Meet">Meet</option>
-      </select>
-      <div style="display:flex; gap:10px;">
-        <div style="flex:1;">
-          <label>Data da Reunião</label><input type="date" name="data_reuniao" required>
-        </div>
-        <div style="flex:1;">
-          <label>Horário</label><input type="time" name="horario" required>
-        </div>
-      </div>
-      <label>Consultor</label>
-      <select name="consultor" id="consultorSelect" required>
-        <option value="">Selecione</option>
-        <option value="Glaucia">Glaucia — +55 17 99274-1145</option>
-        <option value="Leticia">Leticia — +55 17 99202-1249</option>
-        <option value="Marcelo">Marcelo — +55 17 99272-4400</option>
-        <option value="Gabriel">Gabriel — +55 17 99273-9551</option>
-      </select>
-      <label>Observações</label><textarea name="observacoes" rows="3" placeholder="Observações..."></textarea>
+<h1 id="painelTitulo">Carregando...</h1>
 
-      <div class="actions" style="margin-top:10px;">
-        <button id="btnSalvar" type="button">Salvar (Planilha)</button>
-        <button id="btnWhats" type="button">Enviar WhatsApp (Comprovante)</button>
-        <button id="btnClear" type="button" class="btn-secondary">Limpar</button>
-      </div>
-    </form>
-  </div>
+<!-- Seleção de tela (apenas admin) -->
+<select id="selectUser" class="hidden"></select>
 
-  <!-- Área Painel Consultores ou Angela -->
-  <div id="painelReunioes" class="card hidden">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <div class="small" id="painelTitulo">Reuniões</div>
-        <strong id="painelSubtitulo">Hoje</strong>
-      </div>
-      <div>
-        <label for="filterMonth">Filtrar mês:</label>
-        <select id="filterMonth">
-          <option value="">Todos os meses</option>
-        </select>
-      </div>
-    </div>
+<!-- Formulário Angela -->
+<form id="formAngela" class="hidden">
+  <label>Data do Contato: <input type="date" name="data_contato" required></label>
+  <label>Empresa: <input type="text" name="empresa" required></label>
+  <label>Segmento: <input type="text" name="segmento" required></label>
+  <label>UF: <input type="text" name="uf" required></label>
+  <label>Prospecção: <input type="text" name="prospeccao" required></label>
+  <label>Nome: <input type="text" name="nome" required></label>
+  <label>Função: <input type="text" name="funcao" required></label>
+  <label>Contato: <input type="text" name="contato" required></label>
+  <label>Reunião: <input type="text" name="reuniao" required></label>
+  <label>Data da Reunião: <input type="date" name="data_reuniao" required></label>
+  <label>Horário: <input type="time" name="horario" required></label>
+  <label>Consultor: <input type="text" name="consultor" required></label>
+  <label>Observações: <textarea name="observacoes"></textarea></label>
+  <button type="button" id="btnSalvar">Salvar</button>
+  <button type="button" id="btnClear">Limpar</button>
+  <button type="button" id="btnWhats">Enviar WhatsApp</button>
+</form>
 
-    <div id="listaReunioes" style="margin-top:10px;"></div>
-    <div id="errorMsg" class="error hidden"></div>
-  </div>
+<!-- Filtro por data -->
+<div>
+  <label>Data inicial: <input type="date" id="filterStartDate"></label>
+  <label>Data final: <input type="date" id="filterEndDate"></label>
+  <button id="btnApplyDateFilter">Aplicar filtro</button>
+  <button id="btnClearDate">Limpar filtro</button>
+</div>
 
-  <!-- Modal editar reunião -->
-  <div id="modalEdit" class="card hidden" style="position:fixed; top:50%; left:50%; transform: translate(-50%, -50%); width: 480px; max-width: 95%; z-index: 9999;">
-    <h3>Editar reunião</h3>
-    <form id="formEditReuniao">
-      <label>Status</label>
-      <select name="status" required>
-        <option value="">Selecione</option>
-        <option>Agendada</option>
-        <option>Confirmada</option>
-        <option>Realizada</option>
-        <option>Cancelada</option>
-      </select>
+<!-- Lista de reuniões -->
+<div id="listaReunioes"></div>
 
-      <label>Data da Reunião</label>
-      <input type="date" name="data_da_reuniao" required>
+<div id="errorMsg" class="hidden" style="color:red;margin-top:10px;"></div>
 
-      <label>Horário</label>
-      <input type="time" name="horario" required>
-
-      <label>Observações</label>
-      <textarea name="observacao" rows="3"></textarea>
-
-      <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
-        <button type="submit">Salvar</button>
-        <button type="button" id="btnCancelEdit" class="btn-secondary">Cancelar</button>
-      </div>
-    </form>
+<!-- Modal de edição -->
+<div id="modalEdit" class="hidden">
+  <div id="modalEditContent">
+    <h3>Editar Reunião</h3>
+    <label>Status: <input type="text" id="editStatus"></label>
+    <label>Data da Reunião: <input type="date" id="editData"></label>
+    <label>Horário: <input type="time" id="editHorario"></label>
+    <label>Observações: <textarea id="editObs"></textarea></label>
+    <button id="btnSaveEdit">Salvar</button>
+    <button id="btnCloseModal">Fechar</button>
   </div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://apis.google.com/js/api.js" async defer></script>
 <script>
-  const CLIENT_ID = '689575420157-di4d81kgeo6tnaf70edsi6sii5523sev.apps.googleusercontent.com';
-  const API_KEY = 'AIzaSyAiU6bMImfPaQLJj8nVO4V0Je67sSyvGTo';
-  const SHEET_ID = '1-kcIEyUDiBWcGEUKxqotqlpyT-hIta5k3Cx1_mFEUIg';
-  const SHEET_RANGE = 'Sheet1!A1:Z9999';
+const SHEET_ID = 'SEU_SHEET_ID_AQUI'; // coloque seu ID real
+let allMeetingsData = [];
+let currentView = null;
+let currentConsultorName = null;
+let rowBeingEdited = null;
 
-  const btnSignIn = document.getElementById('btnSignIn');
-  const btnSignOut = document.getElementById('btnSignOut');
-  const userEmailEl = document.getElementById('userEmail');
-  const selectUser = document.getElementById('selectUser');
+const userProfile = { email: 'felipesoufacil@gmail.com' };
+const emailAngela = 'angela@soufaciil.com';
+const emailAdmin = 'admin@soufaciil.com';
+const emailsConsultores = { 'lucas@soufaciil.com':'Lucas', 'joao@soufaciil.com':'João' };
 
-  const formAngela = document.getElementById('formAngela');
-  const formAgendamento = document.getElementById('formAgendamento');
-  const btnSalvar = document.getElementById('btnSalvar');
-  const btnWhats = document.getElementById('btnWhats');
-  const btnClear = document.getElementById('btnClear');
+const formAngela = document.getElementById('formAngela');
+const painelReunioes = document.getElementById('listaReunioes');
+const painelTitulo = document.getElementById('painelTitulo');
+const selectUser = document.getElementById('selectUser');
+const filterStartDate = document.getElementById('filterStartDate');
+const filterEndDate = document.getElementById('filterEndDate');
+const btnApplyDateFilter = document.getElementById('btnApplyDateFilter');
+const btnClearDate = document.getElementById('btnClearDate');
+const errorMsg = document.getElementById('errorMsg');
 
-  const painelReunioes = document.getElementById('painelReunioes');
-  const painelTitulo = document.getElementById('painelTitulo');
-  const painelSubtitulo = document.getElementById('painelSubtitulo');
-  const listaReunioes = document.getElementById('listaReunioes');
-  const filterMonth = document.getElementById('filterMonth');
-  const errorMsg = document.getElementById('errorMsg');
+const btnSalvar = document.getElementById('btnSalvar');
+const btnClear = document.getElementById('btnClear');
+const btnWhats = document.getElementById('btnWhats');
 
-  const modalEdit = document.getElementById('modalEdit');
-  const formEditReuniao = document.getElementById('formEditReuniao');
-  const btnCancelEdit = document.getElementById('btnCancelEdit');
+const modalEdit = document.getElementById('modalEdit');
+const editStatus = document.getElementById('editStatus');
+const editData = document.getElementById('editData');
+const editHorario = document.getElementById('editHorario');
+const editObs = document.getElementById('editObs');
+const btnSaveEdit = document.getElementById('btnSaveEdit');
+const btnCloseModal = document.getElementById('btnCloseModal');
 
-  let tokenClient;
-  let gapiInited = false;
-  let userProfile = null;
-  let allMeetingsData = [];
-  let currentView = null; // 'angela' ou consultor
-  let currentConsultorName = null; // nome consultor se for consultor
+function showError(msg){ errorMsg.textContent = msg; errorMsg.classList.remove('hidden'); }
+function hideError(){ errorMsg.textContent=''; errorMsg.classList.add('hidden'); }
 
-  // Emails fixos (coloque os reais que usam)
-  const emailAngela = 'angela@exemplo.com';
-  const emailsConsultores = {
-    'glaucia@exemplo.com': 'Glaucia',
-    'leticia@exemplo.com': 'Leticia',
-    'marcelo@exemplo.com': 'Marcelo',
-    'gabriel@exemplo.com': 'Gabriel'
-  };
-  const emailAdmin = 'felipesoufacil@gmail.com'; // você para escolher telas
-
-  // Mapping status possíveis para facilitar
-  const statusOptions = ['Agendada', 'Confirmada', 'Realizada', 'Cancelada'];
-
-  // Utilitário para formatar datas yyyy-mm-dd -> dd/mm/yyyy
-  function formatDateBR(iso) {
-    if(!iso) return '-';
-    const [y,m,d] = iso.split('-');
-    return `${d}/${m}/${y}`;
-  }
-
-  // Normalize header para campo chave
-  function normalizeHeader(header){
-    return header.toLowerCase().trim().replace(/\s+/g, '_').normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-  }
-
-  // Inicia GAPI client
-  function initGapiClient(){
-    gapi.load('client', async () => {
-      try {
-        await gapi.client.init({
-          apiKey: API_KEY,
-          discoveryDocs: [
-            'https://sheets.googleapis.com/$discovery/rest?version=v4',
-            'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
-          ]
-        });
-        gapiInited = true;
-        await loadMeetings();
-      } catch (err) {
-        console.error('Erro ao inicializar GAPI', err);
-        showError('Erro ao inicializar APIs Google.');
-      }
+async function loadMeetings(){
+  try {
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range:'Sheet1!A2:Z'
     });
-  }
-
-  // Inicializa Token client OAuth
-  function initTokenClient(){
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events openid email profile',
-      callback: async (resp) => {
-        if(resp.error){
-          console.error('Erro no token', resp);
-          alert('Erro na autenticação: ' + resp.error);
-          return;
-        }
-        try {
-          const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {headers: {Authorization: 'Bearer ' + resp.access_token}});
-          userProfile = await r.json();
-          userEmailEl.textContent = userProfile.email;
-          btnSignIn.classList.add('hidden');
-          btnSignOut.classList.remove('hidden');
-          await loadMeetings();
-          setupViewByEmail();
-        } catch (e) {
-          console.error(e);
-          alert('Erro ao buscar perfil.');
-        }
-      }
+    const values = response.result.values || [];
+    const headerResponse = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range:'Sheet1!A1:Z1'
     });
-  }
-
-  btnSignIn.addEventListener('click', () => {
-    if(!tokenClient) return alert('Cliente OAuth não iniciado');
-    tokenClient.requestAccessToken();
-  });
-
-  btnSignOut.addEventListener('click', () => {
-    userProfile = null;
-    allMeetingsData = [];
-    currentView = null;
-    currentConsultorName = null;
-    userEmailEl.textContent = 'Não conectado';
-    btnSignIn.classList.remove('hidden');
-    btnSignOut.classList.add('hidden');
-    formAngela.classList.add('hidden');
-    painelReunioes.classList.add('hidden');
-    selectUser.classList.add('hidden');
-    listaReunioes.innerHTML = '';
-    filterMonth.innerHTML = '<option value="">Todos os meses</option>';
-  });
-
-  // Carregar reuniões da planilha
-  async function loadMeetings(){
-    if(!gapiInited) return;
-    try {
-      const res = await gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: SHEET_RANGE
-      });
-      const rows = res.result.values || [];
-      if(rows.length < 2){
-        allMeetingsData = [];
-        showError('Nenhuma reunião encontrada.');
-        return;
-      }
-      const headerRaw = rows[0];
-      const header = headerRaw.map(normalizeHeader);
-      allMeetingsData = rows.slice(1).map(r => {
-        const obj = {};
-        header.forEach((h,i) => obj[h] = r[i] || '');
-        return obj;
-      });
-      hideError();
-    } catch(err) {
-      console.error('Erro ao carregar reuniões:', err);
-      showError('Erro ao carregar dados da planilha.');
-    }
-  }
-
-  // Montar lista reuniões de acordo com view e filtro
-  function renderMeetings({view, consultor=null, filterDate=null, filterMonthVal=null}){
-    listaReunioes.innerHTML = '';
-
-    if(!allMeetingsData.length){
-      listaReunioes.innerHTML = '<div class="muted">Nenhuma reunião disponível.</div>';
-      return;
-    }
-
-    let filtered = [];
-
-    if(view === 'angela'){
-      // Angela vê reuniões que ela agendou (email_de_quem_mandou contendo "angela")
-      filtered = allMeetingsData.filter(r => (r.email_de_quem_mandou || '').toLowerCase().includes('angela'));
-    } else if(view === 'consultor' && consultor){
-      // Consultor vê reuniões dele (campo consultor = nome)
-      filtered = allMeetingsData.filter(r => r.consultor.toLowerCase() === consultor.toLowerCase());
-    } else {
-      listaReunioes.innerHTML = '<div class="muted">Nenhuma visualização disponível para este usuário.</div>';
-      return;
-    }
-
-    // Filtrar por data se passado
-    if(filterDate){
-      filtered = filtered.filter(r => r.data_da_reuniao === filterDate);
-      painelSubtitulo.textContent = 'Dia: ' + formatDateBR(filterDate);
-    } else {
-      // Por padrão mostrar reuniões de hoje
-      const hoje = new Date().toISOString().slice(0,10);
-      filtered = filtered.filter(r => r.data_da_reuniao === hoje);
-      painelSubtitulo.textContent = 'Hoje';
-    }
-
-    // Filtrar por mês se informado
-    if(filterMonthVal){
-      filtered = filtered.filter(r => r.data_da_reuniao?.startsWith(filterMonthVal));
-    }
-
-    // Ordenar por horário
-    filtered.sort((a,b) => a.horario.localeCompare(b.horario));
-
-    if(filtered.length === 0){
-      listaReunioes.innerHTML = '<div class="muted">Nenhuma reunião encontrada para o filtro.</div>';
-      return;
-    }
-
-    // Criar elementos para reuniões
-    filtered.forEach((row, idx) => {
-      listaReunioes.appendChild(createMeetingElement(row, idx));
+    const header = headerResponse.result.values[0];
+    allMeetingsData = values.map(row=>{
+      const obj={};
+      header.forEach((h,i)=> obj[h]=row[i]||'');
+      return obj;
     });
-  }
+  } catch(err){ console.error('Erro ao carregar reuniões',err); }
+}
 
-  // Criar elemento reunião
-  function createMeetingElement(row, idx){
-    const div = document.createElement('div');
-    div.className = 'meeting-item';
+function renderMeetings({view, consultor=null, startDate='', endDate=''}){
+  painelReunioes.innerHTML='';
+  let data = allMeetingsData;
 
-    div.innerHTML = `
-      <div class="meeting-header">
-        <strong>${row.nome_da_empresa || '-'}</strong>
-        <div class="muted">${row.horario || '-'} — ${row.consultor || '-'}</div>
-        <button aria-expanded="false" aria-controls="details-${idx}">Abrir informações</button>
-      </div>
-      <div class="meeting-details" id="details-${idx}">
-        <p><strong>CNPJ:</strong> ${row.cnpj || '-'}</p>
-        <p><strong>Quantidade de lojas:</strong> ${row.quantidade_de_lojas || '-'}</p>
-        <p><strong>Segmento:</strong> ${row.segmento || '-'}</p>
-        <p><strong>UF:</strong> ${row.uf || '-'}</p>
-        <p><strong>Prospecção:</strong> ${row.prospeccao || '-'}</p>
-        <p><strong>Nome do contato:</strong> ${row.nome || '-'}</p>
-        <p><strong>Função:</strong> ${row.funcao || '-'}</p>
-        <p><strong>Contato:</strong> ${row.contato || '-'}</p>
-        <p><strong>Tipo de reunião:</strong> ${row.reuniao || '-'}</p>
-        <p><strong>Data da reunião:</strong> ${formatDateBR(row.data_da_reuniao)}</p>
-        <p><strong>Horário:</strong> ${row.horario || '-'}</p>
-        <p><strong>Status:</strong> ${row.status || '-'}</p>
-        <p><strong>Observações:</strong> ${row.observacao || '-'}</p>
-        <p><strong>Email de quem mandou:</strong> ${row.email_de_quem_mandou || '-'}</p>
-        <div class="actions">
-          <button class="btnView">Ver</button>
-          <button class="btnEditStatus">Editar Status</button>
-          <button class="btnEditReuniao">Editar</button>
-        </div>
-      </div>
+  if(view==='consultor' && consultor) data = data.filter(r => r.consultor === consultor);
+  if(startDate) data = data.filter(r => r.data_da_reuniao >= startDate);
+  if(endDate) data = data.filter(r => r.data_da_reuniao <= endDate);
+
+  if(data.length===0){ painelReunioes.innerHTML='<p>Nenhuma reunião encontrada</p>'; return; }
+
+  data.forEach((r, idx)=>{
+    const div=document.createElement('div');
+    div.classList.add('meeting');
+    div.innerHTML=`
+      <strong>${r.empresa}</strong> (${r.segmento})<br/>
+      Data da Reunião: ${r.data_da_reuniao} - ${r.horario}<br/>
+      Consultor: ${r.consultor}<br/>
+      Status: ${r.status}<br/>
+      Observações: ${r.observacao || '-'}<br/>
+      <button onclick="openEditModal(${idx})">Editar</button>
     `;
+    painelReunioes.appendChild(div);
+  });
+}
 
-    const btnToggle = div.querySelector('button[aria-expanded]');
-    const details = div.querySelector('.meeting-details');
-    const btnView = div.querySelector('.btnView');
-    const btnEditStatus = div.querySelector('.btnEditStatus');
-    const btnEditReuniao = div.querySelector('.btnEditReuniao');
+function setupViewByEmail(){
+  if(!userProfile?.email) return;
+  const email = userProfile.email.toLowerCase();
 
-    btnToggle.addEventListener('click', () => {
-      const expanded = btnToggle.getAttribute('aria-expanded') === 'true';
-      btnToggle.setAttribute('aria-expanded', String(!expanded));
-      if(expanded){
-        details.style.display = 'none';
-        btnToggle.textContent = 'Abrir informações';
-      } else {
-        details.style.display = 'block';
-        btnToggle.textContent = 'Fechar informações';
-      }
-    });
+  formAngela.classList.add('hidden');
+  painelReunioes.classList.add('hidden');
+  selectUser.classList.add('hidden');
 
-    btnView.addEventListener('click', () => {
-      if(details.style.display === 'block'){
-        details.style.display = 'none';
-        btnToggle.textContent = 'Abrir informações';
-        btnToggle.setAttribute('aria-expanded', 'false');
-      } else {
-        details.style.display = 'block';
-        btnToggle.textContent = 'Fechar informações';
-        btnToggle.setAttribute('aria-expanded', 'true');
-      }
-    });
+  if(email===emailAngela){
+    currentView='angela'; currentConsultorName=null;
+    formAngela.classList.remove('hidden');
+    painelReunioes.classList.remove('hidden');
+    painelTitulo.textContent='Reuniões agendadas por Angela';
+    populateFilterMonthOptions();
+    renderMeetings({view:currentView});
+  } else if(Object.keys(emailsConsultores).includes(email)){
+    currentView='consultor'; currentConsultorName=emailsConsultores[email];
+    painelReunioes.classList.remove('hidden');
+    painelTitulo.textContent=`Reuniões de ${currentConsultorName}`;
+    populateFilterMonthOptions();
+    renderMeetings({view:currentView, consultor:currentConsultorName});
+  } else if(email===emailAdmin){
+    selectUser.classList.remove('hidden');
+    selectUser.innerHTML = `<option value="">Selecione a tela</option><option value="angela">Angela</option>${Object.values(emailsConsultores).map(c=>`<option value="${c.toLowerCase()}">${c}</option>`).join('')}`;
+    painelReunioes.classList.remove('hidden');
+    painelTitulo.textContent='Selecione uma tela para visualizar';
+    renderMeetings({view:null});
+  } else{
+    alert('Você não tem permissão para acessar este sistema.');
+  }
+}
 
-    btnEditStatus.addEventListener('click', () => {
-      openEditModal(row, 'status');
-    });
+selectUser.addEventListener('change', ()=>{
+  const val=selectUser.value;
+  if(val==='angela'){ currentView='angela'; currentConsultorName=null; formAngela.classList.remove('hidden'); painelTitulo.textContent='Reuniões agendadas por Angela'; renderMeetings({view:currentView}); }
+  else if(val){ currentView='consultor'; currentConsultorName=val.charAt(0).toUpperCase()+val.slice(1); formAngela.classList.add('hidden'); painelTitulo.textContent=`Reuniões de ${currentConsultorName}`; renderMeetings({view:currentView, consultor:currentConsultorName}); }
+  else{ formAngela.classList.add('hidden'); painelTitulo.textContent='Selecione uma tela para visualizar'; painelReunioes.innerHTML=''; currentView=null; currentConsultorName=null;}
+});
 
-    btnEditReuniao.addEventListener('click', () => {
-      openEditModal(row, 'full');
-    });
+btnApplyDateFilter.addEventListener('click', ()=>{
+  renderMeetings({view:currentView, consultor:currentConsultorName, startDate:filterStartDate.value, endDate:filterEndDate.value});
+});
+btnClearDate.addEventListener('click', ()=>{
+  filterStartDate.value=''; filterEndDate.value='';
+  renderMeetings({view:currentView, consultor:currentConsultorName});
+});
 
-    return div;
+// === Formulário Angela ===
+btnClear.addEventListener('click', ()=>formAngela.reset());
+
+btnSalvar.addEventListener('click', async ()=>{
+  const formData=new FormData(formAngela);
+  const dataObj={};
+  formData.forEach((v,k)=>dataObj[k]=v.trim());
+
+  if(!dataObj.data_contato || !dataObj.empresa || !dataObj.segmento || !dataObj.uf || !dataObj.prospeccao || !dataObj.nome || !dataObj.funcao || !dataObj.contato || !dataObj.reuniao || !dataObj.data_reuniao || !dataObj.horario || !dataObj.consultor){
+    alert('Preencha todos os campos obrigatórios!');
+    return;
   }
 
-  // Abre modal para editar status ou reunião completa
-  function openEditModal(row, mode='status'){
-    modalEdit.classList.remove('hidden');
-    formEditReuniao.reset();
+  const novaLinha=[
+    new Date().toLocaleDateString('pt-BR'),
+    dataObj.data_contato,
+    dataObj.empresa,
+    dataObj.cnpj || '',
+    dataObj.qtd_lojas || '',
+    dataObj.segmento,
+    dataObj.uf,
+    dataObj.prospeccao,
+    dataObj.nome,
+    dataObj.funcao,
+    dataObj.contato,
+    dataObj.reuniao,
+    dataObj.data_reuniao,
+    dataObj.horario,
+    dataObj.consultor,
+    '',
+    dataObj.observacoes || '',
+    userProfile.email,
+    'Agendada'
+  ];
 
-    // Preencher campos com dados atuais
-    formEditReuniao.status.value = row.status || '';
-    formEditReuniao.data_da_reuniao.value = row.data_da_reuniao || '';
-    formEditReuniao.horario.value = row.horario || '';
-    formEditReuniao.observacao.value = row.observacao || '';
+  try{
+    await gapi.client.sheets.spreadsheets.values.append({
+      spreadsheetId:SHEET_ID,
+      range:'Sheet1!A1:Z1',
+      valueInputOption:'RAW',
+      insertDataOption:'INSERT_ROWS',
+      resource:{values:[novaLinha]}
+    });
+    alert('Reunião agendada com sucesso!');
+    formAngela.reset();
+    await loadMeetings();
+    renderMeetings({view:currentView, consultor:currentConsultorName});
+  }catch(err){ console.error(err); alert('Erro ao salvar na planilha.'); }
+});
 
-    // Salvar referência da reunião que está editando
-    formEditReuniao.dataset.rowId = row._rowId || null;
-    formEditReuniao.dataset.mode = mode;
+btnWhats.addEventListener('click', ()=>{
+  const formData=new FormData(formAngela);
+  const empresa=formData.get('empresa');
+  const consultor=formData.get('consultor');
+  if(!empresa || !consultor){ alert('Preencha pelo menos empresa e consultor'); return; }
+  const text=`Olá! Reunião agendada para a empresa *${empresa}* com o consultor *${consultor}*.`;
+  const url=`https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(url,'_blank');
+});
 
-    // Se modo status só mostrar select status, esconder os outros campos
-    if(mode === 'status'){
-      formEditReuniao.data_da_reuniao.parentElement.style.display = 'none';
-      formEditReuniao.horario.parentElement.style.display = 'none';
-      formEditReuniao.observacao.parentElement.style.display = 'none';
-    } else {
-      formEditReuniao.data_da_reuniao.parentElement.style.display = 'block';
-      formEditReuniao.horario.parentElement.style.display = 'block';
-      formEditReuniao.observacao.parentElement.style.display = 'block';
-    }
-  }
+// === Modal edição ===
+function openEditModal(idx){
+  rowBeingEdited=idx;
+  const r=allMeetingsData[idx];
+  editStatus.value=r.status; editData.value=r.data_da_reuniao; editHorario.value=r.horario; editObs.value=r.observacao||'';
+  modalEdit.classList.remove('hidden');
+}
 
-  // Fechar modal
-  btnCancelEdit.addEventListener('click', () => {
+btnCloseModal.addEventListener('click', ()=> modalEdit.classList.add('hidden'));
+
+btnSaveEdit.addEventListener('click', async ()=>{
+  const r=allMeetingsData[rowBeingEdited];
+  r.status=editStatus.value; r.data_da_reuniao=editData.value; r.horario=editHorario.value; r.observacao=editObs.value;
+
+  const header=Object.keys(allMeetingsData[0]||{});
+  const statusCol=header.indexOf('status');
+  const dataReuniaoCol=header.indexOf('data_da_reuniao');
+  const horarioCol=header.indexOf('horario');
+  const observacaoCol=header.indexOf('observacao');
+  if(statusCol===-1 || dataReuniaoCol===-1 || horarioCol===-1 || observacaoCol===-1){ alert('Colunas necessárias não encontradas na planilha.'); return; }
+
+  let rowData=[];
+  for(let h of header) rowData.push(allMeetingsData[rowBeingEdited][h]||'');
+
+  rowData[statusCol]=r.status;
+  rowData[dataReuniaoCol]=r.data_da_reuniao;
+  rowData[horarioCol]=r.horario;
+  rowData[observacaoCol]=r.observacao;
+
+  try{
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId:SHEET_ID,
+      range:`Sheet1!A${rowBeingEdited+2}:Z${rowBeingEdited+2}`,
+      valueInputOption:'RAW',
+      resource:{values:[rowData]}
+    });
+    alert('Reunião atualizada com sucesso!');
     modalEdit.classList.add('hidden');
+    renderMeetings({view:currentView, consultor:currentConsultorName, startDate:filterStartDate.value, endDate:filterEndDate.value});
+  }catch(err){ console.error(err); alert('Erro ao atualizar reunião.'); }
+});
+
+function populateFilterMonthOptions(){
+  const monthsSet=new Set();
+  allMeetingsData.forEach(r=>{
+    if(r.data_da_reuniao && r.data_da_reuniao.length>=7) monthsSet.add(r.data_da_reuniao.slice(0,7));
   });
+}
 
-  // Salvar edição da reunião na planilha
-  formEditReuniao.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const rowId = formEditReuniao.dataset.rowId;
-    if(rowId == null){
-      alert('Erro: não foi possível identificar a reunião.');
-      return;
-    }
-
-    const status = formEditReuniao.status.value;
-    const dataReuniao = formEditReuniao.data_da_reuniao.value;
-    const horario = formEditReuniao.horario.value;
-    const observacao = formEditReuniao.observacao.value;
-
-    if(!status){
-      alert('Status é obrigatório.');
-      return;
-    }
-    if(!dataReuniao){
-      alert('Data da reunião é obrigatória.');
-      return;
-    }
-    if(!horario){
-      alert('Horário é obrigatório.');
-      return;
-    }
-
-    // Atualizar a planilha na linha correta (rowId é índice + 2 pois o índice é zero baseado em dados sem cabeçalho, e linha 1 é cabeçalho)
-    // Atualizar colunas: status, data_da_reuniao, horario, observacao
-    // Precisamos saber o índice das colunas
-
-    const header = Object.keys(allMeetingsData[0] || {});
-    const statusCol = header.indexOf('status');
-    const dataReuniaoCol = header.indexOf('data_da_reuniao');
-    const horarioCol = header.indexOf('horario');
-    const observacaoCol = header.indexOf('observacao');
-
-    if(statusCol === -1 || dataReuniaoCol === -1 || horarioCol === -1 || observacaoCol === -1){
-      alert('Colunas necessárias não encontradas na planilha.');
-      return;
-    }
-
-    // Criar array para update (preenchendo as colunas na ordem)
-    // vamos recuperar a linha original (com base na rowId)
-    let rowData = [];
-    for(let h of header){
-      rowData.push(allMeetingsData[rowId][h] || '');
-    }
-    // Atualizar campos alterados
-    rowData[statusCol] = status;
-    rowData[dataReuniaoCol] = dataReuniao;
-    rowData[horarioCol] = horario;
-    rowData[observacaoCol] = observacao;
-
-    // Atualizar na planilha Google Sheets
-    try {
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID,
-        range: `Sheet1!A${rowId+2}:Z${rowId+2}`, // linha 2 + índice, colunas A até Z (garante atualizar toda linha)
-        valueInputOption: 'RAW',
-        resource: {values: [rowData]}
-      });
-      // Atualizar localmente
-      allMeetingsData[rowId] = {};
-      header.forEach((h,i) => allMeetingsData[rowId][h] = rowData[i]);
-
-      alert('Reunião atualizada com sucesso!');
-      modalEdit.classList.add('hidden');
-      // Re-renderizar lista para refletir
-      renderMeetings({view: currentView, consultor: currentConsultorName, filterMonthVal: filterMonth.value});
-    } catch(err) {
-      console.error('Erro ao atualizar reunião:', err);
-      alert('Erro ao atualizar reunião.');
-    }
-  });
-
-  // Mostrar erro
-  function showError(msg){
-    errorMsg.textContent = msg;
-    errorMsg.classList.remove('hidden');
-  }
-  function hideError(){
-    errorMsg.textContent = '';
-    errorMsg.classList.add('hidden');
-  }
-
-  // Setup tela conforme email logado
-  function setupViewByEmail(){
-    if(!userProfile?.email) return;
-    const email = userProfile.email.toLowerCase();
-
-    // Reset tudo
-    formAngela.classList.add('hidden');
-    painelReunioes.classList.add('hidden');
-    selectUser.classList.add('hidden');
-
-    if(email === emailAngela){
-      // Angela vê formulário + painel
-      currentView = 'angela';
-      currentConsultorName = null;
-      formAngela.classList.remove('hidden');
-      painelReunioes.classList.remove('hidden');
-      painelTitulo.textContent = 'Reuniões agendadas por Angela';
-      populateFilterMonthOptions();
-      renderMeetings({view: currentView});
-    } else if(Object.keys(emailsConsultores).includes(email)){
-      // Consultor vê só seu painel
-      currentView = 'consultor';
-      currentConsultorName = emailsConsultores[email];
-      painelReunioes.classList.remove('hidden');
-      painelTitulo.textContent = `Reuniões de ${currentConsultorName}`;
-      populateFilterMonthOptions();
-      renderMeetings({view: currentView, consultor: currentConsultorName});
-    } else if(email === emailAdmin){
-      // Você pode escolher tela (Angela ou consultores)
-      selectUser.classList.remove('hidden');
-      selectUser.innerHTML = `
-        <option value="">Selecione a tela</option>
-        <option value="angela">Angela</option>
-        ${Object.values(emailsConsultores).map(c => `<option value="${c.toLowerCase()}">${c}</option>`).join('')}
-      `;
-      painelReunioes.classList.remove('hidden');
-      painelTitulo.textContent = 'Selecione uma tela para visualizar';
-      listaReunioes.innerHTML = '';
-      formAngela.classList.add('hidden');
-      currentView = null;
-      currentConsultorName = null;
-    } else {
-      // Usuário não autorizado
-      alert('Você não tem permissão para acessar este sistema.');
-      userEmailEl.textContent = 'Usuário não autorizado';
-      btnSignIn.classList.remove('hidden');
-      btnSignOut.classList.add('hidden');
-      formAngela.classList.add('hidden');
-      painelReunioes.classList.add('hidden');
-      selectUser.classList.add('hidden');
-      listaReunioes.innerHTML = '';
-      currentView = null;
-      currentConsultorName = null;
-    }
-  }
-
-  // Quando o admin escolher tela, atualizar
-  selectUser.addEventListener('change', () => {
-    const val = selectUser.value;
-    if(val === 'angela'){
-      currentView = 'angela';
-      currentConsultorName = null;
-      formAngela.classList.remove('hidden');
-      painelTitulo.textContent = 'Reuniões agendadas por Angela';
-      populateFilterMonthOptions();
-      renderMeetings({view: currentView});
-    } else if(val){
-      currentView = 'consultor';
-      currentConsultorName = val.charAt(0).toUpperCase() + val.slice(1);
-      formAngela.classList.add('hidden');
-      painelTitulo.textContent = `Reuniões de ${currentConsultorName}`;
-      populateFilterMonthOptions();
-      renderMeetings({view: currentView, consultor: currentConsultorName});
-    } else {
-      formAngela.classList.add('hidden');
-      painelTitulo.textContent = 'Selecione uma tela para visualizar';
-      listaReunioes.innerHTML = '';
-      currentView = null;
-      currentConsultorName = null;
-    }
-  });
-
-  // Popula select mês com meses distintos das reuniões
-  function populateFilterMonthOptions(){
-    const monthsSet = new Set();
-    allMeetingsData.forEach(r => {
-      if(r.data_da_reuniao && r.data_da_reuniao.length >= 7){
-        monthsSet.add(r.data_da_reuniao.slice(0,7));
-      }
-    });
-    const monthsArr = Array.from(monthsSet).sort((a,b) => b.localeCompare(a)); // decrescente
-    filterMonth.innerHTML = '<option value="">Todos os meses</option>' + monthsArr.map(m => {
-      const [y,mm] = m.split('-');
-      return `<option value="${m}">${mm}/${y}</option>`;
-    }).join('');
-  }
-
-  // Quando muda filtro mês
-  filterMonth.addEventListener('change', () => {
-    if(!currentView) return;
-    renderMeetings({view: currentView, consultor: currentConsultorName, filterMonthVal: filterMonth.value});
-  });
-
-  // === Formulário Angela ===
-
-  btnClear.addEventListener('click', () => formAgendamento.reset());
-
-  btnSalvar.addEventListener('click', async () => {
-    const formData = new FormData(formAgendamento);
-    const dataObj = {};
-    formData.forEach((v,k) => dataObj[k] = v.trim());
-
-    // Validação simples
-    if(!dataObj.data_contato || !dataObj.empresa || !dataObj.segmento || !dataObj.uf || !dataObj.prospeccao || !dataObj.nome || !dataObj.funcao || !dataObj.contato || !dataObj.reuniao || !dataObj.data_reuniao || !dataObj.horario || !dataObj.consultor){
-      alert('Preencha todos os campos obrigatórios!');
-      return;
-    }
-
-    // Montar linha para inserir na planilha (ordem conforme colunas da planilha):
-    // Data do agendamento | Data do contato | Nome da empresa | CNPJ | Quantidade de lojas | Segmento | UF | Prospecção | Nome | Função | Contato | Reunião | Data da Reunião | Horário | Consultor | Numero do consultor | Observação | Email de quem mandou | Status
-    // Como não temos numero do consultor no form, vamos deixar vazio
-    // Status inicial: Agendada
-
-    const novaLinha = [
-      new Date().toLocaleDateString('pt-BR'), // Data do agendamento (hoje)
-      dataObj.data_contato,
-      dataObj.empresa,
-      dataObj.cnpj || '',
-      dataObj.qtd_lojas || '',
-      dataObj.segmento,
-      dataObj.uf,
-      dataObj.prospeccao,
-      dataObj.nome,
-      dataObj.funcao,
-      dataObj.contato,
-      dataObj.reuniao,
-      dataObj.data_reuniao,
-      dataObj.horario,
-      dataObj.consultor,
-      '', // Número do consultor (vazio)
-      dataObj.observacoes || '',
-      userProfile.email, // Email de quem mandou
-      'Agendada' // status inicial
-    ];
-
-    try {
-      await gapi.client.sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: 'Sheet1!A1:Z1',
-        valueInputOption: 'RAW',
-        insertDataOption: 'INSERT_ROWS',
-        resource: {values: [novaLinha]}
-      });
-      alert('Reunião agendada com sucesso!');
-      formAgendamento.reset();
-      await loadMeetings();
-      renderMeetings({view: currentView});
-    } catch(err) {
-      console.error('Erro ao salvar agendamento', err);
-      alert('Erro ao salvar na planilha.');
-    }
-  });
-
-  // Botão enviar WhatsApp (exemplo simples, pode melhorar)
-  btnWhats.addEventListener('click', () => {
-    const formData = new FormData(formAgendamento);
-    const empresa = formData.get('empresa');
-    const consultor = formData.get('consultor');
-    if(!empresa || !consultor) {
-      alert('Preencha pelo menos empresa e consultor para enviar WhatsApp');
-      return;
-    }
-    const text = `Olá! Reunião agendada para a empresa *${empresa}* com o consultor *${consultor}*.`;
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  });
-
-  // Inicializar APIs Google e preparar sistema
-  window.onload = () => {
-    initTokenClient();
-    initGapiClient();
-  };
+window.onload = ()=>{
+  initTokenClient();
+  initGapiClient();
+  setupViewByEmail();
+};
 </script>
 </body>
 </html>
