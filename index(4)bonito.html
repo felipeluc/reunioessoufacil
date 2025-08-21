@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reuniões SouFácil - Sistema</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="brand">
+                <div class="logo">SF</div>
+                <div class="brand-info">
+                    <h1>Reuniões SouFácil</h1>
+                    <div class="user-email" id="userEmail">Não conectado</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <select id="selectUser" class="hidden" title="Selecionar tela para visualização">
+                    <option value="">Selecionar visualização</option>
+                    <option value="angela">Angela</option>
+                    <option value="glaucia">Glaucia</option>
+                    <option value="leticia">Leticia</option>
+                    <option value="marcelo">Marcelo</option>
+                    <option value="gabriel">Gabriel</option>
+                    <option value="dashboard">Dashboard Gerencial</option>
+                </select>
+                <button id="btnSignIn" class="btn btn-primary">
+                    <i class="fab fa-google"></i>
+                    Entrar com Google
+                </button>
+                <button id="btnSignOut" class="btn btn-secondary hidden">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Sair
+                </button>
+            </div>
+        </header>
+
+        <!-- Área para formulário Angela -->
+        <div id="formAngela" class="card hidden">
+            <div class="card-header">
+                <h2><i class="fas fa-calendar-plus"></i> Agendamento de Reunião</h2>
+                <p class="card-subtitle">Formulário para Angela agendar reuniões</p>
+            </div>
+            <form id="formAgendamento" class="form-grid">
+                <div class="form-group">
+                    <label for="data_contato">Data do contato</label>
+                    <input type="date" name="data_contato" id="data_contato" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="empresa">Nome da empresa</label>
+                    <input type="text" name="empresa" id="empresa" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cnpj">CNPJ</label>
+                    <input type="text" name="cnpj" id="cnpj" placeholder="00.000.000/0000-00">
+                </div>
+                
+                <div class="form-group">
+                    <label for="qtd_lojas">Quantidade de lojas</label>
+                    <input type="number" name="qtd_lojas" id="qtd_lojas" min="0">
+                </div>
+                
+                <div class="form-group">
+                    <label for="segmento">Segmento</label>
+                    <select name="segmento" id="segmento" required>
+                        <option value="">Selecione</option>
+                        <option>Móveis</option>
+                        <option>Óticas</option>
+                        <option>Roupas</option>
+                        <option>Calçados</option>
+                        <option>Celular</option>
+                        <option>Mercado</option>
+                        <option>Farmácia</option>
+                        <option>Eletro</option>
+                        <option>Utilidades</option>
+                        <option>Distribuidora</option>
+                        <option>Clínica</option>
+                        <option>Conveniência</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="uf">UF</label>
+                    <select name="uf" id="uf" required>
+                        <option value="">Selecione</option>
+                        <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+                        <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+                        <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
+                        <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+                        <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
+                        <option>SP</option><option>TO</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="prospeccao">Prospecção</label>
+                    <select name="prospeccao" id="prospeccao" required>
+                        <option value="">Selecione</option>
+                        <option>Leads</option>
+                        <option>Internet</option>
+                        <option>Indicação</option>
+                        <option>Ligação</option>
+                        <option>Visita</option>
+                        <option>Já é cliente</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="nome">Nome</label>
+                    <input type="text" name="nome" id="nome" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="funcao">Função</label>
+                    <select name="funcao" id="funcao" required>
+                        <option value="">Selecione</option>
+                        <option>Funcionário</option>
+                        <option>Vendedor</option>
+                        <option>Proprietário</option>
+                        <option>Gerente</option>
+                        <option>Financeiro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contato">Contato</label>
+                    <input type="tel" name="contato" id="contato" placeholder="+55 (DDD) 90000-0000" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reuniao">Tipo de Reunião</label>
+                    <select name="reuniao" id="tipoReuniao" required>
+                        <option value="">Selecione</option>
+                        <option value="Ligação">Ligação</option>
+                        <option value="Whats">WhatsApp</option>
+                        <option value="Meet">Google Meet</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="data_reuniao">Data da Reunião</label>
+                    <input type="date" name="data_reuniao" id="data_reuniao" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="horario">Horário</label>
+                    <input type="time" name="horario" id="horario" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="consultor">Consultor</label>
+                    <select name="consultor" id="consultorSelect" required>
+                        <option value="">Selecione</option>
+                        <option value="Glaucia">Glaucia — +55 17 99274-1145</option>
+                        <option value="Leticia">Leticia — +55 17 99202-1249</option>
+                        <option value="Marcelo">Marcelo — +55 17 99272-4400</option>
+                        <option value="Gabriel">Gabriel — +55 17 99273-9551</option>
+                    </select>
+                </div>
+                
+                <div class="form-group form-group-full">
+                    <label for="observacoes">Observações</label>
+                    <textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="btnSalvar" type="button" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Salvar Reunião
+                    </button>
+                    <button id="btnWhats" type="button" class="btn btn-success">
+                        <i class="fab fa-whatsapp"></i>
+                        Enviar WhatsApp
+                    </button>
+                    <button id="btnClear" type="button" class="btn btn-secondary">
+                        <i class="fas fa-eraser"></i>
+                        Limpar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Dashboard Gerencial -->
+        <div id="dashboardGerencial" class="hidden">
+            <div class="dashboard-header">
+                <h2><i class="fas fa-chart-line"></i> Dashboard Gerencial</h2>
+                <div class="dashboard-filters">
+                    <div class="filter-group">
+                        <label for="dashStartDate">Data inicial:</label>
+                        <input type="date" id="dashStartDate">
+                    </div>
+                    <div class="filter-group">
+                        <label for="dashEndDate">Data final:</label>
+                        <input type="date" id="dashEndDate">
+                    </div>
+                    <button id="btnDashFilter" class="btn btn-primary">
+                        <i class="fas fa-filter"></i>
+                        Filtrar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-plus"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statAgendadas">0</h3>
+                        <p>Reuniões Agendadas</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline stat-info" data-stat="Agendada"><i class="fas fa-info-circle"></i></button>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statConfirmadas">0</h3>
+                        <p>Confirmadas</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline stat-info" data-stat="Confirmada"><i class="fas fa-info-circle"></i></button>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statRecusadas">0</h3>
+                        <p>Recusadas</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline stat-info" data-stat="Recusada"><i class="fas fa-info-circle"></i></button>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statTransferidas">0</h3>
+                        <p>Transferidas</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline stat-info" data-stat="Transferida"><i class="fas fa-info-circle"></i></button>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statSugeridas">0</h3>
+                        <p>Novo Horário Sugerido</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline stat-info" data-stat="Sugerido Novo Horário"><i class="fas fa-info-circle"></i></button>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statRealizadas">0</h3>
+                        <p>Realizadas</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline stat-info" data-stat="Realizada"><i class="fas fa-info-circle"></i></button>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statContasFechadas">0</h3>
+                        <p>Contas Fechadas</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline stat-info" data-stat-pos="Fechado"><i class="fas fa-info-circle"></i></button>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statValorAdesao">R$ 0,00</h3>
+                        <p>Valor de Adesão (Total)</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline stat-info" data-stat="ValorAdesao"><i class="fas fa-info-circle"></i></button>
+                </div>
+            </div>
+            
+            <div class="dashboard-charts">
+                <div class="chart-container">
+                    <h3>Reuniões por Consultor</h3>
+                    <canvas id="chartConsultores"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Status das Reuniões</h3>
+                    <canvas id="chartStatus"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área Painel Reuniões (Angela e Consultores) -->
+        <div id="painelReunioes" class="card hidden">
+            <div class="card-header">
+                <div class="panel-title">
+                    <h2 id="painelTitulo"><i class="fas fa-calendar"></i> Reuniões</h2>
+                    <p id="painelSubtitulo" class="card-subtitle">Hoje</p>
+                </div>
+                <div class="panel-filters">
+                    <div class="filter-group">
+                        <label for="startDate">Data inicial:</label>
+                        <input type="date" id="startDate">
+                    </div>
+                    <div class="filter-group">
+                        <label for="endDate">Data final:</label>
+                        <input type="date" id="endDate">
+                    </div>
+                    <div class="filter-group">
+                        <label for="statusFilter">Status:</label>
+                        <select id="statusFilter">
+                            <option value="">Todos</option>
+                            <option value="Agendada">Agendada</option>
+                            <option value="Confirmada">Confirmada</option>
+                            <option value="Recusada">Recusada</option>
+                            <option value="Transferida">Transferida</option>
+                            <option value="Sugerido Novo Horário">Sugerido Novo Horário</option>
+                            <option value="Realizada">Realizada</option>
+                        </select>
+                    </div>
+                    <button id="btnFilter" class="btn btn-primary">
+                        <i class="fas fa-filter"></i>
+                        Filtrar
+                    </button>
+                </div>
+            </div>
+            
+            <div id="listaReunioes" class="meetings-list"></div>
+            <div id="errorMsg" class="error-message hidden"></div>
+        </div>
+
+        <!-- Minhas Reuniões (Consultor) -->
+        <div id="consultorMinhasReunioes" class="card hidden">
+            <div class="card-header">
+                <h2><i class="fas fa-clipboard-list"></i> Minhas Reuniões (Consultor)</h2>
+                <div>
+                    <button id="btnAddContaPropria" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus"></i> Adicionar Conta Própria
+                    </button>
+                </div>
+            </div>
+            <div class="minhas-reunioes-lista"></div>
+        </div>
+
+        <!-- Área para Angela gerenciar sugestões -->
+        <div id="angelaGerenciarSugestoes" class="card hidden">
+            <div class="card-header">
+                <h2><i class="fas fa-cogs"></i> Gerenciar Sugestões de Horário</h2>
+                <p class="card-subtitle">Aceitar ou transferir reuniões com novo horário sugerido</p>
+            </div>
+            <div id="listaSugestoes" class="meetings-list"></div>
+        </div>
+
+        <!-- Modais -->
+        
+        <!-- Modal Detalhes da Reunião -->
+        <div id="modalDetalhes" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-info-circle"></i> Detalhes da Reunião</h3>
+                    <button id="btnCloseDetalhes" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="detalhesContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Ações do Consultor -->
+        <div id="modalAcoes" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-tasks"></i> Ações da Reunião</h3>
+                    <button id="btnCloseAcoes" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="action-buttons">
+                        <button id="btnAceitar" class="btn btn-success">
+                            <i class="fas fa-check"></i>
+                            Aceitar Reunião
+                        </button>
+                        <button id="btnRecusar" class="btn btn-danger">
+                            <i class="fas fa-times"></i>
+                            Recusar Reunião
+                        </button>
+                        <button id="btnSugerir" class="btn btn-warning">
+                            <i class="fas fa-clock"></i>
+                            Sugerir Novo Horário
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Sugerir Novo Horário -->
+        <div id="modalSugerir" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-clock"></i> Sugerir Novo Horário</h3>
+                    <button id="btnCloseSugerir" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="formSugerir">
+                        <div class="form-group">
+                            <label for="novaData">Nova Data</label>
+                            <input type="date" id="novaData" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="novoHorario">Novo Horário</label>
+                            <input type="time" id="novoHorario" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="observacaoSugestao">Observação</label>
+                            <textarea id="observacaoSugestao" rows="3" placeholder="Motivo da sugestão..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="btnConfirmarSugestao" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                                Enviar Sugestão
+                            </button>
+                            <button type="button" id="btnCancelarSugestao" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Gerenciar (Angela) -->
+        <div id="modalGerenciar" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-cog"></i> Gerenciar Sugestão</h3>
+                    <button id="btnCloseGerenciar" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="sugestaoInfo"></div>
+                    <div class="action-buttons">
+                        <button id="btnAceitarSugestao" class="btn btn-success">
+                            <i class="fas fa-check"></i>
+                            Aceitar Sugestão
+                        </button>
+                        <button id="btnTransferirReuniao" class="btn btn-warning">
+                            <i class="fas fa-exchange-alt"></i>
+                            Transferir para Outro Consultor
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Transferir Reunião -->
+        <div id="modalTransferir" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-exchange-alt"></i> Transferir Reunião</h3>
+                    <button id="btnCloseTransferir" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="formTransferir">
+                        <div class="form-group">
+                            <label for="novoConsultor">Novo Consultor</label>
+                            <select id="novoConsultor" required>
+                                <option value="">Selecione</option>
+                                <option value="Glaucia">Glaucia</option>
+                                <option value="Leticia">Leticia</option>
+                                <option value="Marcelo">Marcelo</option>
+                                <option value="Gabriel">Gabriel</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="motivoTransferencia">Motivo da Transferência</label>
+                            <textarea id="motivoTransferencia" rows="3" placeholder="Motivo da transferência..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="btnConfirmarTransferencia" class="btn btn-primary">
+                                <i class="fas fa-exchange-alt"></i>
+                                Confirmar Transferência
+                            </button>
+                            <button type="button" id="btnCancelarTransferencia" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Status da Reunião (Consultor) -->
+        <div id="modalStatusReuniao" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-flag"></i> Atualizar Status da Reunião</h3>
+                    <button id="btnCloseStatusReuniao" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="formStatusReuniao">
+                        <div class="form-group">
+                            <label for="statusPosReuniao">Status da Reunião</label>
+                            <select id="statusPosReuniao" required>
+                                <option value="">Selecione</option>
+                                <option value="Fechado">Fechado</option>
+                                <option value="Não se interessou">Não se interessou</option>
+                                <option value="Remarcou">Remarcou</option>
+                                <option value="Negociando">Negociando</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="valorAdesaoGroup" style="display: none;">
+                            <label for="valorAdesaoReuniao">Valor de Adesão (R$)</label>
+                            <input type="number" step="0.01" min="0" id="valorAdesaoReuniao" placeholder="0,00">
+                        </div>
+                        <div class="form-group">
+                            <label for="observacaoStatus">Observações</label>
+                            <textarea id="observacaoStatus" rows="3" placeholder="Observações sobre o status..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="btnSalvarStatus" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Salvar Status
+                            </button>
+                            <button type="button" id="btnCancelarStatus" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Conta Própria -->
+        <div id="modalContaPropria" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-plus"></i> Adicionar Conta Própria</h3>
+                    <button id="btnCloseContaPropria" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="formContaPropria">
+                        <div class="form-group">
+                            <label for="cpEmpresa">Empresa</label>
+                            <input type="text" id="cpEmpresa" name="empresa" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cpData">Data da Reunião/Fechamento</label>
+                            <input type="date" id="cpData" name="data_reuniao" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cpHorario">Horário</label>
+                            <input type="time" id="cpHorario" name="horario" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cpValor">Valor de Adesão (R$)</label>
+                            <input type="number" step="0.01" min="0" id="cpValor" name="valor_adesao" required>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label for="cpObservacoes">Observações</label>
+                            <textarea id="cpObservacoes" name="observacoes" rows="3"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="btnSalvarContaPropria" class="btn btn-success"><i class="fas fa-save"></i> Salvar Conta</button>
+                            <button type="button" id="btnCancelContaPropria" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Detalhes do Dashboard -->
+        <div id="modalDashInfo" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-list"></i> Detalhes</h3>
+                    <button id="btnCloseDashInfo" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="dashInfoContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Carregando...</p>
+            </div>
+        </div>
+
+        <!-- Notification toast -->
+        <div id="notification" class="notification hidden">
+            <div class="notification-content">
+                <i class="notification-icon"></i>
+                <span class="notification-message"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="test_sheets_api.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
