@@ -128,7 +128,7 @@ const Utils = {
         this.showNotification(message, 'error');
     },
     
-    showNotification(message, type = 'info') {
+    showNotification(message, type = 'info', duration = 5000) {
         const notification = document.getElementById('notification');
         if (notification) {
             const content = notification.querySelector('.notification-content');
@@ -150,10 +150,10 @@ const Utils = {
             notification.className = `notification notification-${type}`;
             notification.classList.remove('hidden');
             
-            // Auto-hide após 5 segundos
+            // Auto-hide após duração especificada
             setTimeout(() => {
                 notification.classList.add('hidden');
-            }, 5000);
+            }, duration);
         } else {
             alert(message);
         }
@@ -192,6 +192,83 @@ const Utils = {
     isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
+    },
+
+    validateMeetingData(data) {
+        const errors = [];
+        
+        if (!data.empresa || data.empresa.trim() === '') {
+            errors.push('Nome da empresa é obrigatório');
+        }
+        
+        if (!data.contato || data.contato.trim() === '') {
+            errors.push('Contato é obrigatório');
+        }
+        
+        if (!data.data_reuniao) {
+            errors.push('Data da reunião é obrigatória');
+        }
+        
+        if (!data.horario) {
+            errors.push('Horário da reunião é obrigatório');
+        }
+        
+        if (!data.consultor) {
+            errors.push('Consultor é obrigatório');
+        }
+        
+        // Validar se a data da reunião não é no passado
+        if (data.data_reuniao) {
+            const today = new Date();
+            const meetingDate = new Date(data.data_reuniao);
+            today.setHours(0, 0, 0, 0);
+            meetingDate.setHours(0, 0, 0, 0);
+            
+            if (meetingDate < today) {
+                errors.push('Data da reunião não pode ser no passado');
+            }
+        }
+        
+        return errors;
+    },
+
+    autoSaveFormData() {
+        if (DOM.formAgendamento) {
+            const formData = new FormData(DOM.formAgendamento);
+            const data = Object.fromEntries(formData);
+            localStorage.setItem('formAgendamento_autoSave', JSON.stringify(data));
+        }
+    },
+
+    loadAutoSavedFormData() {
+        const savedData = localStorage.getItem('formAgendamento_autoSave');
+        if (savedData && DOM.formAgendamento) {
+            try {
+                const data = JSON.parse(savedData);
+                Object.keys(data).forEach(key => {
+                    const field = DOM.formAgendamento.querySelector(`[name="${key}"]`);
+                    if (field && data[key]) {
+                        field.value = data[key];
+                    }
+                });
+                Utils.showNotification('Dados do formulário restaurados automaticamente', 'info', 3000);
+            } catch (error) {
+                console.error('Erro ao carregar dados salvos automaticamente:', error);
+            }
+        }
+    },
+
+    clearAutoSavedFormData() {
+        localStorage.removeItem('formAgendamento_autoSave');
+    },
+
+    showValidationErrors(errors) {
+        if (errors.length > 0) {
+            const errorMessage = 'Erros encontrados:\n' + errors.join('\n');
+            this.showNotification(errorMessage, 'error', 8000);
+            return false;
+        }
+        return true;
     }
 };
 
@@ -288,7 +365,7 @@ const Auth = {
         DOM.consultorMinhasReunioes.classList.add("hidden");
         DOM.angelaGerenciarSugestoes.classList.add("hidden");
         DOM.dashboardGerencial.classList.add("hidden");
-        // DOM.selectUser.classList.add("hidden"); // Removido para não esconder por padrão
+        DOM.selectUser.classList.add("hidden"); // Esconder o seletor por padrão
 
         // Verificar se é Angela
         if (email.includes("angela") || email === USERS.ANGELA) {
@@ -297,7 +374,7 @@ const Auth = {
             this.showAngelaView();
         }
         // Verificar se é consultor
-        else if (USERS.CONSULTORES[email]) {
+        else if (Object.keys(USERS.CONSULTORES).includes(email)) {
             AppState.currentView = "consultor";
             AppState.currentConsultor = USERS.CONSULTORES[email];
             console.log("Auth.setupUserView: Usuário é consultor - ", AppState.currentConsultor);
@@ -307,6 +384,7 @@ const Auth = {
         else if (USERS.GERENTES.includes(email) || email === USERS.ADMIN) {
             AppState.currentView = "admin";
             console.log("Auth.setupUserView: Usuário é admin/gerente.");
+            DOM.selectUser.classList.remove("hidden"); // Mostrar o seletor para admin/gerente
             this.showAdminView();
         }
         else {
@@ -314,21 +392,39 @@ const Auth = {
             console.error("Auth.setupUserView: Usuário não autorizado - ", email);
         }
 
-        // Adicionar listener para o selectUser se for admin
+        // Adicionar listener para o selectUser se for admin/gerente
         if (USERS.GERENTES.includes(email) || email === USERS.ADMIN) {
-            DOM.selectUser.classList.remove("hidden");
-            DOM.selectUser.removeEventListener('change', Auth.handleUserSelectChange); // Remover para evitar duplicação
-            DOM.selectUser.addEventListener('change', Auth.handleUserSelectChange);
+            this.populateUserSelect(); // Preencher o seletor de usuário
+            DOM.selectUser.removeEventListener(\'change\', Auth.handleUserSelectChange); // Remover para evitar duplicação
+            DOM.selectUser.addEventListener(\'change\', Auth.handleUserSelectChange);
         }
     },
     
+    populateUserSelect() {
+        const select = DOM.selectUser;
+        select.innerHTML = 
+            `<option value="">Selecionar visualização</option>
+            <option value="angela">Angela</option>`;
+
+        for (const email in USERS.CONSULTORES) {
+            select.innerHTML += `<option value="${USERS.CONSULTORES[email]}">${USERS.CONSULTORES[email]}</option>`;
+        }
+        select.innerHTML += `<option value="dashboard">Dashboard Gerencial</option>`;
+    },
+
     handleUserSelectChange() {
         const selectedValue = DOM.selectUser.value;
         if (selectedValue === 'angela') {
             Auth.showAngelaView();
-        } else if (USERS.CONSULTORES[selectedValue + '@soufacil.com']) {
-            AppState.currentConsultor = USERS.CONSULTORES[selectedValue + '@soufacil.com'];
-            Auth.showConsultorView();
+        } else if (Object.values(USERS.CONSULTORES).includes(selectedValue)) {
+            // Encontrar o email do consultor pelo nome selecionado
+            const consultorEmail = Object.keys(USERS.CONSULTORES).find(key => USERS.CONSULTORES[key] === selectedValue);
+            if (consultorEmail) {
+                AppState.currentConsultor = USERS.CONSULTORES[consultorEmail];
+                Auth.showConsultorView();
+            } else {
+                console.error("Consultor não encontrado para o valor selecionado: ", selectedValue);
+            }
         } else if (selectedValue === 'dashboard') {
             Auth.showAdminView();
         } else {
@@ -352,6 +448,10 @@ const Auth = {
         DOM.painelSubtitulo.textContent = 'Reuniões agendadas por você';
         MeetingRenderer.renderMeetings('angela');
         AngelaManager.renderSugestoes();
+        
+        // Carregar dados salvos automaticamente
+        Utils.loadAutoSavedFormData();
+        
         console.log("Auth.showAngelaView: Visualização da Angela exibida.");
     },
     
@@ -456,9 +556,17 @@ const DataManager = {
 
     async saveMeeting(meetingData) {
         try {
+            // Validar dados antes de salvar
+            const validationErrors = Utils.validateMeetingData(meetingData);
+            if (!Utils.showValidationErrors(validationErrors)) {
+                return; // Parar se houver erros de validação
+            }
+
             if (!AppState.gapiInited) {
                 throw new Error('Google Sheets API não inicializada');
             }
+
+            Utils.showLoading();
 
             // Adicionar timestamp e ID
             meetingData.id = Date.now();
@@ -487,9 +595,19 @@ const DataManager = {
             // Recarregar dados
             await this.loadMeetings();
             
+            // Limpar formulário
+            if (DOM.formAgendamento) {
+                DOM.formAgendamento.reset();
+            }
+            
+            // Limpar dados salvos automaticamente
+            Utils.clearAutoSavedFormData();
+            
+            Utils.hideLoading();
             Utils.showNotification('Reunião salva com sucesso!', 'success');
         } catch (error) {
             console.error('Erro ao salvar reunião:', error);
+            Utils.hideLoading();
             Utils.showError('Erro ao salvar reunião');
         }
     },
@@ -1652,6 +1770,21 @@ function setupFormEventListeners() {
     if (DOM.btnClear) {
         DOM.btnClear.addEventListener('click', () => {
             DOM.formAgendamento.reset();
+            Utils.clearAutoSavedFormData();
+            Utils.showNotification('Formulário limpo', 'info', 2000);
+        });
+    }
+
+    // Auto-save nos campos do formulário
+    if (DOM.formAgendamento) {
+        const formFields = DOM.formAgendamento.querySelectorAll('input, select, textarea');
+        formFields.forEach(field => {
+            field.addEventListener('input', () => {
+                Utils.autoSaveFormData();
+            });
+            field.addEventListener('change', () => {
+                Utils.autoSaveFormData();
+            });
         });
     }
 
