@@ -15,8 +15,8 @@ const USERS = {
         'marcelo@soufacil.com': 'Marcelo',
         'gabriel@soufacil.com': 'Gabriel'
     },
-    ADMIN: 'felipe@soufacil.com',
-    GERENTES: ['felipe@soufacil.com', 'carol@soufacil.com']
+    ADMIN: 'felipesoufacil@gmail.com',
+    GERENTES: ['felipesoufacil@gmail.com', 'carol@soufacil.com']
 };
 
 // Status possíveis das reuniões
