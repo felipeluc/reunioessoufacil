@@ -288,7 +288,7 @@ const Auth = {
         DOM.consultorMinhasReunioes.classList.add("hidden");
         DOM.angelaGerenciarSugestoes.classList.add("hidden");
         DOM.dashboardGerencial.classList.add("hidden");
-        DOM.selectUser.classList.add("hidden");
+        // DOM.selectUser.classList.add("hidden"); // Removido para não esconder por padrão
 
         // Verificar se é Angela
         if (email.includes("angela") || email === USERS.ANGELA) {
@@ -369,7 +369,7 @@ const Auth = {
         DOM.consultorMinhasReunioes.classList.add('hidden');
         DOM.angelaGerenciarSugestoes.classList.add('hidden');
         DOM.dashboardGerencial.classList.add('hidden');
-        DOM.selectUser.classList.add('hidden');
+        DOM.selectUser.classList.add('hidden'); // Adicionado de volta para esconder no logout
         DOM.listaReunioes.innerHTML = '';
         
         Utils.showNotification('Logout realizado com sucesso!', 'success');
