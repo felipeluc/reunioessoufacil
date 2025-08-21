@@ -72,7 +72,7 @@ const DOM = {
     listaReunioes: document.getElementById('listaReunioes'),
     startDate: document.getElementById('startDate'),
     endDate: document.getElementById('endDate'),
-    statusFilter: document.getElementById('statusFilter'),
+    statusFilter: document.getElementById('statusFilter'), // Adicionado
     btnFilter: document.getElementById('btnFilter'),
     
     // Dashboard
@@ -104,12 +104,12 @@ const DOM = {
     // Seções específicas
     consultorMinhasReunioes: document.getElementById('consultorMinhasReunioes'),
     angelaGerenciarSugestoes: document.getElementById('angelaGerenciarSugestoes'),
-    listaSugestoes: document.getElementById('listaSugestoes'),
+    listaSugestoes: document.getElementById('listaSugestoes'), // Adicionado
     
     // Mensagens
-    loadingMsg: document.getElementById('loadingMsg'),
+    loadingMsg: document.getElementById('loadingOverlay'), // Corrigido
     errorMsg: document.getElementById('errorMsg'),
-    successMsg: document.getElementById('successMsg')
+    successMsg: document.getElementById('notification') // Corrigido
 };
 
 // Utilitários
@@ -221,7 +221,7 @@ const Auth = {
             AppState.tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CONFIG.CLIENT_ID,
                 scope: "https://www.googleapis.com/auth/spreadsheets openid email profile",
-                callback: Auth.handleAuthCallback.bind(Auth),
+                callback: Auth.handleAuthCallback.bind(Auth), // Corrigido o contexto do 'this'
             });
 
             console.log('Sistema de autenticação Google inicializado');
@@ -313,13 +313,41 @@ const Auth = {
             Utils.showError("Usuário não autorizado para este sistema");
             console.error("Auth.setupUserView: Usuário não autorizado - ", email);
         }
+
+        // Adicionar listener para o selectUser se for admin
+        if (USERS.GERENTES.includes(email) || email === USERS.ADMIN) {
+            DOM.selectUser.classList.remove("hidden");
+            DOM.selectUser.removeEventListener('change', Auth.handleUserSelectChange); // Remover para evitar duplicação
+            DOM.selectUser.addEventListener('change', Auth.handleUserSelectChange);
+        }
     },
     
+    handleUserSelectChange() {
+        const selectedValue = DOM.selectUser.value;
+        if (selectedValue === 'angela') {
+            Auth.showAngelaView();
+        } else if (USERS.CONSULTORES[selectedValue + '@soufacil.com']) {
+            AppState.currentConsultor = USERS.CONSULTORES[selectedValue + '@soufacil.com'];
+            Auth.showConsultorView();
+        } else if (selectedValue === 'dashboard') {
+            Auth.showAdminView();
+        } else {
+            // Limpar visualização se nada for selecionado
+            DOM.formAngela.classList.add("hidden");
+            DOM.painelReunioes.classList.add("hidden");
+            DOM.consultorMinhasReunioes.classList.add("hidden");
+            DOM.angelaGerenciarSugestoes.classList.add("hidden");
+            DOM.dashboardGerencial.classList.add("hidden");
+        }
+    },
+
     showAngelaView() {
         console.log("Auth.showAngelaView: Exibindo visualização da Angela.");
         DOM.formAngela.classList.remove("hidden");
         DOM.painelReunioes.classList.remove("hidden");
         DOM.angelaGerenciarSugestoes.classList.remove("hidden");
+        DOM.consultorMinhasReunioes.classList.add("hidden"); // Esconder outras seções
+        DOM.dashboardGerencial.classList.add("hidden"); // Esconder outras seções
         DOM.painelTitulo.innerHTML = '<i class="fas fa-calendar"></i> Minhas Reuniões';
         DOM.painelSubtitulo.textContent = 'Reuniões agendadas por você';
         MeetingRenderer.renderMeetings('angela');
@@ -331,6 +359,9 @@ const Auth = {
         console.log("Auth.showConsultorView: Exibindo visualização do consultor.");
         DOM.painelReunioes.classList.remove("hidden");
         DOM.consultorMinhasReunioes.classList.remove("hidden");
+        DOM.formAngela.classList.add("hidden"); // Esconder outras seções
+        DOM.angelaGerenciarSugestoes.classList.add("hidden"); // Esconder outras seções
+        DOM.dashboardGerencial.classList.add("hidden"); // Esconder outras seções
         DOM.painelTitulo.innerHTML = `<i class="fas fa-user"></i> Reuniões - ${AppState.currentConsultor}`;
         DOM.painelSubtitulo.textContent = 'Reuniões atribuídas a você';
         MeetingRenderer.renderMeetings('consultor');
@@ -342,6 +373,10 @@ const Auth = {
         console.log("Auth.showAdminView: Exibindo visualização do admin.");
         DOM.selectUser.classList.remove("hidden");
         DOM.dashboardGerencial.classList.remove("hidden");
+        DOM.formAngela.classList.add("hidden"); // Esconder outras seções
+        DOM.painelReunioes.classList.add("hidden"); // Esconder outras seções
+        DOM.consultorMinhasReunioes.classList.add("hidden"); // Esconder outras seções
+        DOM.angelaGerenciarSugestoes.classList.add("hidden"); // Esconder outras seções
         DashboardManager.init();
         console.log("Auth.showAdminView: Visualização do admin exibida.");
     },
@@ -359,6 +394,7 @@ const Auth = {
         AppState.currentView = null;
         AppState.currentConsultor = null;
         AppState.meetings = [];
+        AppState.contasProprias = []; // Limpar contas próprias no logout
         
         // Resetar interface
         DOM.userEmail.textContent = 'Não conectado';
@@ -369,7 +405,7 @@ const Auth = {
         DOM.consultorMinhasReunioes.classList.add('hidden');
         DOM.angelaGerenciarSugestoes.classList.add('hidden');
         DOM.dashboardGerencial.classList.add('hidden');
-        DOM.selectUser.classList.add('hidden'); // Adicionado de volta para esconder no logout
+        DOM.selectUser.classList.add('hidden');
         DOM.listaReunioes.innerHTML = '';
         
         Utils.showNotification('Logout realizado com sucesso!', 'success');
@@ -392,6 +428,7 @@ const DataManager = {
             const rows = response.result.values;
             if (!rows || rows.length === 0) {
                 AppState.meetings = [];
+                AppState.contasProprias = []; // Garantir que contas próprias também sejam limpas
                 return;
             }
 
@@ -405,7 +442,12 @@ const DataManager = {
                 return meeting;
             });
 
+            // Separar contas próprias (se houver um campo para isso)
+            AppState.contasProprias = AppState.meetings.filter(m => m.tipo === 'conta_propria');
+            AppState.meetings = AppState.meetings.filter(m => m.tipo !== 'conta_propria');
+
             console.log('Reuniões carregadas:', AppState.meetings.length);
+            console.log('Contas Próprias carregadas:', AppState.contasProprias.length);
         } catch (error) {
             console.error('Erro ao carregar reuniões:', error);
             Utils.showError('Erro ao carregar dados da planilha');
@@ -424,7 +466,16 @@ const DataManager = {
             meetingData.status_reuniao = STATUS.AGENDADA;
 
             // Preparar dados para a planilha
-            const values = [Object.values(meetingData)];
+            // Garantir que a ordem dos cabeçalhos seja mantida
+            const headers = [
+                'id', 'data_criacao', 'data_contato', 'empresa', 'cnpj', 'qtd_lojas', 'segmento', 'uf',
+                'prospeccao', 'nome', 'funcao', 'contato', 'reuniao', 'data_reuniao', 'horario',
+                'consultor', 'observacoes', 'status_reuniao', 'data_confirmacao', 'data_recusa',
+                'nova_data_sugerida', 'novo_horario_sugerido', 'observacao_sugestao', 'data_sugestao',
+                'consultor_original', 'motivo_transferencia', 'data_transferencia', 'status_pos_reuniao',
+                'observacao_status', 'data_atualizacao_status', 'valor_adesao', 'tipo' // Adicionado 'tipo'
+            ];
+            const values = [headers.map(header => meetingData[header] || '')];
 
             await gapi.client.sheets.spreadsheets.values.append({
                 spreadsheetId: CONFIG.SHEET_ID,
@@ -446,25 +497,63 @@ const DataManager = {
     async updateMeeting(meetingId, updates) {
         try {
             if (!AppState.gapiInited) {
-                throw new Error('Google Sheets API não inicializada');
+                throw new Error("Google Sheets API não inicializada");
             }
 
-            // Encontrar a reunião
+            // Encontrar a reunião e sua linha na planilha
             const meetingIndex = AppState.meetings.findIndex(m => m.id == meetingId);
-            if (meetingIndex === -1) {
-                throw new Error('Reunião não encontrada');
+            let rowIndex;
+            let targetMeeting;
+
+            if (meetingIndex !== -1) {
+                targetMeeting = AppState.meetings[meetingIndex];
+                rowIndex = meetingIndex + 2; // +1 para o cabeçalho, +1 para 1-based index
+            } else {
+                // Se não encontrou nas reuniões principais, procurar nas contas próprias
+                const contaPropriaIndex = AppState.contasProprias.findIndex(m => m.id == meetingId);
+                if (contaPropriaIndex !== -1) {
+                    targetMeeting = AppState.contasProprias[contaPropriaIndex];
+                    // Para contas próprias, precisamos encontrar o rowIndex correto na planilha.
+                    // Isso é um pouco mais complexo, pois AppState.contasProprias é um subconjunto.
+                    // A melhor abordagem é recarregar todos os dados após a atualização para garantir consistência.
+                    Object.assign(targetMeeting, updates);
+                    await this.loadMeetings();
+                    Utils.showNotification("Reunião (conta própria) atualizada com sucesso!", "success");
+                    return;
+                } else {
+                    throw new Error("Reunião não encontrada");
+                }
             }
 
-            // Atualizar dados localmente
+            const updatedMeeting = { ...targetMeeting, ...updates };
+
+            // Obter os cabeçalhos da planilha para mapear os dados
+            const headersResponse = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: CONFIG.SHEET_ID,
+                range: 'Sheet1!A1:Z1',
+            });
+            const headers = headersResponse.result.values[0];
+
+            // Criar um array de valores na ordem correta dos cabeçalhos
+            const valuesToUpdate = headers.map(header => updatedMeeting[header] || '');
+
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: CONFIG.SHEET_ID,
+                range: `Sheet1!A${rowIndex}:Z${rowIndex}`,
+                valueInputOption: 'RAW',
+                resource: { values: [valuesToUpdate] }
+            });
+
+            // Atualizar dados localmente após a atualização na planilha
             Object.assign(AppState.meetings[meetingIndex], updates);
 
-            // Atualizar na planilha (implementação simplificada)
-            // Em uma implementação real, você atualizaria a linha específica
+            // Recarregar dados para garantir consistência
+            await this.loadMeetings();
             
-            Utils.showNotification('Reunião atualizada com sucesso!', 'success');
+            Utils.showNotification("Reunião atualizada com sucesso!", "success");
         } catch (error) {
-            console.error('Erro ao atualizar reunião:', error);
-            Utils.showError('Erro ao atualizar reunião');
+            console.error("Erro ao atualizar reunião:", error);
+            Utils.showError("Erro ao atualizar reunião");
         }
     },
 
@@ -477,10 +566,30 @@ const DataManager = {
             // Adicionar à lista local
             contaData.id = Date.now();
             contaData.data_criacao = new Date().toISOString();
-            contaData.tipo = 'conta_propria';
-            AppState.contasProprias.push(contaData);
+            contaData.tipo = 'conta_propria'; // Marcar como conta própria
+            contaData.status_reuniao = STATUS.REALIZADA; // Contas próprias são consideradas realizadas
+            contaData.status_pos_reuniao = STATUS_POS_REUNIAO.FECHADO; // E fechadas
 
-            // Salvar na planilha (implementação específica necessária)
+            // Preparar dados para a planilha
+            const headers = [
+                'id', 'data_criacao', 'data_contato', 'empresa', 'cnpj', 'qtd_lojas', 'segmento', 'uf',
+                'prospeccao', 'nome', 'funcao', 'contato', 'reuniao', 'data_reuniao', 'horario',
+                'consultor', 'observacoes', 'status_reuniao', 'data_confirmacao', 'data_recusa',
+                'nova_data_sugerida', 'novo_horario_sugerido', 'observacao_sugestao', 'data_sugestao',
+                'consultor_original', 'motivo_transferencia', 'data_transferencia', 'status_pos_reuniao',
+                'observacao_status', 'data_atualizacao_status', 'valor_adesao', 'tipo' // Adicionado 'tipo'
+            ];
+            const values = [headers.map(header => contaData[header] || '')];
+
+            await gapi.client.sheets.spreadsheets.values.append({
+                spreadsheetId: CONFIG.SHEET_ID,
+                range: 'Sheet1!A:Z',
+                valueInputOption: 'RAW',
+                resource: { values }
+            });
+
+            // Recarregar dados
+            await this.loadMeetings();
             
             Utils.showNotification('Conta própria adicionada com sucesso!', 'success');
         } catch (error) {
@@ -521,23 +630,34 @@ const MeetingRenderer = {
         // Filtrar por data se especificado
         const startDate = DOM.startDate?.value;
         const endDate = DOM.endDate?.value;
-        const statusFilter = DOM.statusFilter?.value;
+        const statusFilter = DOM.statusFilter?.value; // Adicionado filtro de status
 
         if (startDate || endDate || statusFilter) {
             meetings = meetings.filter(meeting => {
-                let include = true;
-
+                let includeDate = true;
                 if (startDate && meeting.data_reuniao < startDate) {
-                    include = false;
+                    includeDate = false;
                 }
                 if (endDate && meeting.data_reuniao > endDate) {
-                    include = false;
-                }
-                if (statusFilter && meeting.status_reuniao !== statusFilter) {
-                    include = false;
+                    includeDate = false;
                 }
 
-                return include;
+                let includeStatus = true;
+                if (statusFilter) {
+                    if (viewType === 'angela') {
+                        // Angela pode filtrar por status_reuniao ou status_pos_reuniao
+                        if (meeting.status_reuniao !== statusFilter && meeting.status_pos_reuniao !== statusFilter) {
+                            includeStatus = false;
+                        }
+                    } else {
+                        // Outros usuários filtram apenas por status_reuniao
+                        if (meeting.status_reuniao !== statusFilter) {
+                            includeStatus = false;
+                        }
+                    }
+                }
+
+                return includeDate && includeStatus;
             });
         }
 
@@ -594,13 +714,13 @@ const MeetingRenderer = {
                 ${meeting.status_pos_reuniao ? `
                 <div class="detail-item">
                     <i class="fas fa-flag"></i>
-                    <span>Status: ${meeting.status_pos_reuniao}</span>
+                    <span>Status Pós-Reunião: ${meeting.status_pos_reuniao}</span>
                 </div>
                 ` : ''}
                 ${meeting.valor_adesao ? `
                 <div class="detail-item">
                     <i class="fas fa-money-bill"></i>
-                    <span>Valor: ${Utils.formatCurrency(meeting.valor_adesao)}</span>
+                    <span>Valor Adesão: ${Utils.formatCurrency(meeting.valor_adesao)}</span>
                 </div>
                 ` : ''}
             </div>
@@ -622,7 +742,7 @@ const MeetingRenderer = {
                 return `
                     <button class="btn btn-sm btn-warning" onclick="AngelaManager.showGerenciarModal(${meeting.id})">
                         <i class="fas fa-cog"></i>
-                        Gerenciar
+                        Gerenciar Sugestão
                     </button>
                 `;
             }
@@ -638,7 +758,7 @@ const MeetingRenderer = {
                 return `
                     <button class="btn btn-sm btn-success" onclick="ConsultorManager.showStatusModal(${meeting.id})">
                         <i class="fas fa-edit"></i>
-                        Status
+                        Atualizar Status
                     </button>
                 `;
             }
@@ -702,6 +822,18 @@ const MeetingActions = {
                             <label>Status</label>
                             <span>${meeting.status_reuniao}</span>
                         </div>
+                        ${meeting.status_pos_reuniao ? `
+                        <div class="detail-item">
+                            <label>Status Pós-Reunião</label>
+                            <span>${meeting.status_pos_reuniao}</span>
+                        </div>
+                        ` : ''}
+                        ${meeting.valor_adesao ? `
+                        <div class="detail-item">
+                            <label>Valor de Adesão</label>
+                            <span>${Utils.formatCurrency(meeting.valor_adesao)}</span>
+                        </div>
+                        ` : ''}
                         <div class="detail-item detail-full">
                             <label>Observações</label>
                             <span>${meeting.observacoes || 'Nenhuma observação'}</span>
@@ -991,7 +1123,11 @@ const ConsultorManager = {
         const consultorNome = AppState.currentConsultor;
         const minhasReunioes = AppState.meetings.filter(meeting => 
             meeting.consultor && meeting.consultor.includes(consultorNome) &&
-            meeting.status_reuniao === STATUS.CONFIRMADA
+            (meeting.status_reuniao === STATUS.CONFIRMADA || 
+             meeting.status_pos_reuniao === STATUS_POS_REUNIAO.FECHADO ||
+             meeting.status_pos_reuniao === STATUS_POS_REUNIAO.NAO_INTERESSOU ||
+             meeting.status_pos_reuniao === STATUS_POS_REUNIAO.REMARCOU ||
+             meeting.status_pos_reuniao === STATUS_POS_REUNIAO.NEGOCIANDO)
         );
         
         // Renderizar na seção específica
@@ -1012,7 +1148,7 @@ const ConsultorManager = {
         lista.innerHTML = '';
 
         if (meetings.length === 0) {
-            lista.innerHTML = '<div class="no-meetings">Nenhuma reunião confirmada</div>';
+            lista.innerHTML = '<div class="no-meetings">Nenhuma reunião confirmada ou com status definido</div>';
             return;
         }
 
@@ -1024,7 +1160,7 @@ const ConsultorManager = {
                 <div class="meeting-header">
                     <div class="meeting-title">
                         <h3>${meeting.empresa}</h3>
-                        <span class="meeting-status status-confirmada">Confirmada</span>
+                        <span class="meeting-status ${MeetingRenderer.getStatusClass(meeting.status_reuniao)}">${meeting.status_reuniao}</span>
                     </div>
                     <div class="meeting-date">
                         ${Utils.formatDateBR(meeting.data_reuniao)} às ${meeting.horario}
@@ -1042,13 +1178,13 @@ const ConsultorManager = {
                     ${meeting.status_pos_reuniao ? `
                     <div class="detail-item">
                         <i class="fas fa-flag"></i>
-                        <span>Status: ${meeting.status_pos_reuniao}</span>
+                        <span>Status Pós-Reunião: ${meeting.status_pos_reuniao}</span>
                     </div>
                     ` : ''}
                     ${meeting.valor_adesao ? `
                     <div class="detail-item">
                         <i class="fas fa-money-bill"></i>
-                        <span>Valor: ${Utils.formatCurrency(meeting.valor_adesao)}</span>
+                        <span>Valor Adesão: ${Utils.formatCurrency(meeting.valor_adesao)}</span>
                     </div>
                     ` : ''}
                 </div>
@@ -1070,19 +1206,37 @@ const ConsultorManager = {
 
         AppState.selectedMeeting = meeting;
         
-        // Configurar evento para mostrar/esconder campo de valor
+        // Preencher o modal com os dados atuais da reunião
         const statusSelect = document.getElementById('statusPosReuniao');
         const valorGroup = document.getElementById('valorAdesaoGroup');
-        
-        if (statusSelect && valorGroup) {
-            statusSelect.addEventListener('change', function() {
-                if (this.value === STATUS_POS_REUNIAO.FECHADO) {
-                    valorGroup.style.display = 'block';
-                } else {
-                    valorGroup.style.display = 'none';
-                }
-            });
+        const valorInput = document.getElementById('valorAdesaoReuniao');
+        const observacaoInput = document.getElementById('observacaoStatus');
+
+        if (statusSelect) {
+            statusSelect.value = meeting.status_pos_reuniao || '';
         }
+        if (valorInput) {
+            valorInput.value = meeting.valor_adesao || '';
+        }
+        if (observacaoInput) {
+            observacaoInput.value = meeting.observacao_status || '';
+        }
+
+        // Mostrar/esconder campo de valor baseado no status inicial
+        if (statusSelect?.value === STATUS_POS_REUNIAO.FECHADO) {
+            valorGroup.style.display = 'block';
+        } else {
+            valorGroup.style.display = 'none';
+        }
+
+        // Adicionar listener para mostrar/esconder campo de valor
+        statusSelect.onchange = function() { // Usar onchange para evitar múltiplos listeners
+            if (this.value === STATUS_POS_REUNIAO.FECHADO) {
+                valorGroup.style.display = 'block';
+            } else {
+                valorGroup.style.display = 'none';
+            }
+        };
         
         Utils.showModal(DOM.modalStatusReuniao);
     },
@@ -1110,6 +1264,8 @@ const ConsultorManager = {
 
             if (status === STATUS_POS_REUNIAO.FECHADO && valorAdesao) {
                 updates.valor_adesao = parseFloat(valorAdesao);
+            } else {
+                updates.valor_adesao = ''; // Limpar valor se não for fechado
             }
             
             await DataManager.updateMeeting(AppState.selectedMeeting.id, updates);
@@ -1152,7 +1308,7 @@ const ConsultorManager = {
                 horario: horario,
                 valor_adesao: parseFloat(valor),
                 observacoes: observacoes,
-                status_pos_reuniao: STATUS_POS_REUNIAO.FECHADO
+                // status_pos_reuniao e status_reuniao são definidos no DataManager.saveContaPropria
             };
 
             await DataManager.saveContaPropria(contaPropria);
@@ -1162,6 +1318,7 @@ const ConsultorManager = {
             
             Utils.hideModal(DOM.modalContaPropria);
             Utils.showNotification('Conta própria adicionada com sucesso!', 'success');
+            DashboardManager.loadDashboardData(); // Atualizar dashboard após adicionar conta própria
         } catch (error) {
             console.error('Erro ao adicionar conta própria:', error);
             Utils.showError('Erro ao adicionar conta própria');
@@ -1173,6 +1330,9 @@ const ConsultorManager = {
 
 // Gerenciamento do Dashboard
 const DashboardManager = {
+    chartConsultoresInstance: null,
+    chartStatusInstance: null,
+
     init() {
         this.setupDateFilters();
         this.loadDashboardData();
@@ -1201,8 +1361,8 @@ const DashboardManager = {
         // Event listeners para botões de informação
         document.querySelectorAll('.stat-info').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const stat = e.target.closest('.stat-info').dataset.stat;
-                const statPos = e.target.closest('.stat-info').dataset.statPos;
+                const stat = e.currentTarget.dataset.stat; // Usar currentTarget
+                const statPos = e.currentTarget.dataset.statPos; // Usar currentTarget
                 this.showStatInfo(stat || statPos);
             });
         });
@@ -1213,14 +1373,15 @@ const DashboardManager = {
             Utils.showLoading();
             
             // Filtrar reuniões por data se especificado
-            let meetings = AppState.meetings;
+            let meetings = AppState.meetings.concat(AppState.contasProprias); // Incluir contas próprias
             const startDate = DOM.dashStartDate?.value;
             const endDate = DOM.dashEndDate?.value;
 
             if (startDate || endDate) {
                 meetings = meetings.filter(meeting => {
-                    if (startDate && meeting.data_reuniao < startDate) return false;
-                    if (endDate && meeting.data_reuniao > endDate) return false;
+                    const meetingDate = meeting.data_reuniao; // Usar data_reuniao para contas próprias também
+                    if (startDate && meetingDate < startDate) return false;
+                    if (endDate && meetingDate > endDate) return false;
                     return true;
                 });
             }
@@ -1250,39 +1411,37 @@ const DashboardManager = {
         };
 
         meetings.forEach(meeting => {
-            switch (meeting.status_reuniao) {
-                case STATUS.AGENDADA:
-                    stats.agendadas++;
-                    break;
-                case STATUS.CONFIRMADA:
-                    stats.confirmadas++;
-                    break;
-                case STATUS.RECUSADA:
-                    stats.recusadas++;
-                    break;
-                case STATUS.TRANSFERIDA:
-                    stats.transferidas++;
-                    break;
-                case STATUS.SUGERIDO:
-                    stats.sugeridas++;
-                    break;
-                case STATUS.REALIZADA:
-                    stats.realizadas++;
-                    break;
+            // Contabilizar status de reunião (para reuniões não-próprias)
+            if (meeting.tipo !== 'conta_propria') {
+                switch (meeting.status_reuniao) {
+                    case STATUS.AGENDADA:
+                        stats.agendadas++;
+                        break;
+                    case STATUS.CONFIRMADA:
+                        stats.confirmadas++;
+                        break;
+                    case STATUS.RECUSADA:
+                        stats.recusadas++;
+                        break;
+                    case STATUS.TRANSFERIDA:
+                        stats.transferidas++;
+                        break;
+                    case STATUS.SUGERIDO:
+                        stats.sugeridas++;
+                        break;
+                    case STATUS.REALIZADA:
+                        stats.realizadas++;
+                        break;
+                }
             }
 
-            if (meeting.status_pos_reuniao === STATUS_POS_REUNIAO.FECHADO) {
+            // Contabilizar contas fechadas e valor de adesão
+            if (meeting.status_pos_reuniao === STATUS_POS_REUNIAO.FECHADO || meeting.tipo === 'conta_propria') {
                 stats.contasFechadas++;
                 if (meeting.valor_adesao) {
                     stats.valorAdesao += parseFloat(meeting.valor_adesao);
                 }
             }
-        });
-
-        // Adicionar contas próprias
-        AppState.contasProprias.forEach(conta => {
-            stats.contasFechadas++;
-            stats.valorAdesao += parseFloat(conta.valor_adesao || conta.valor || 0);
         });
 
         return stats;
@@ -1300,13 +1459,105 @@ const DashboardManager = {
     },
 
     updateCharts(meetings) {
-        // Implementar gráficos com Chart.js
-        // Esta é uma implementação básica
-        console.log('Atualizando gráficos com', meetings.length, 'reuniões');
+        // Dados para o gráfico de consultores
+        const consultorCounts = {};
+        meetings.forEach(m => {
+            if (m.consultor) {
+                consultorCounts[m.consultor] = (consultorCounts[m.consultor] || 0) + 1;
+            }
+        });
+        const consultorLabels = Object.keys(consultorCounts);
+        const consultorData = Object.values(consultorCounts);
+
+        // Gráfico de Reuniões por Consultor
+        const ctxConsultores = document.getElementById('chartConsultores')?.getContext('2d');
+        if (ctxConsultores) {
+            if (this.chartConsultoresInstance) {
+                this.chartConsultoresInstance.destroy();
+            }
+            this.chartConsultoresInstance = new Chart(ctxConsultores, {
+                type: 'bar',
+                data: {
+                    labels: consultorLabels,
+                    datasets: [{
+                        label: 'Número de Reuniões',
+                        data: consultorData,
+                        backgroundColor: 'rgba(0, 122, 255, 0.7)',
+                        borderColor: 'rgba(0, 122, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Dados para o gráfico de status
+        const statusCounts = {};
+        Object.values(STATUS).forEach(s => statusCounts[s] = 0); // Inicializar todos os status
+        Object.values(STATUS_POS_REUNIAO).forEach(s => statusCounts[s] = 0); // Inicializar todos os status pós-reunião
+
+        meetings.forEach(m => {
+            if (m.tipo === 'conta_propria') {
+                statusCounts[STATUS_POS_REUNIAO.FECHADO]++; // Contas próprias são fechadas
+            } else if (m.status_pos_reuniao) {
+                statusCounts[m.status_pos_reuniao]++;
+            } else if (m.status_reuniao) {
+                statusCounts[m.status_reuniao]++;
+            }
+        });
+
+        const statusLabels = Object.keys(statusCounts).filter(key => statusCounts[key] > 0);
+        const statusData = Object.values(statusCounts).filter(value => value > 0);
+
+        // Gráfico de Status das Reuniões
+        const ctxStatus = document.getElementById('chartStatus')?.getContext('2d');
+        if (ctxStatus) {
+            if (this.chartStatusInstance) {
+                this.chartStatusInstance.destroy();
+            }
+            this.chartStatusInstance = new Chart(ctxStatus, {
+                type: 'pie',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: [
+                            'rgba(0, 122, 255, 0.7)', // Agendada
+                            'rgba(40, 167, 69, 0.7)',  // Confirmada
+                            'rgba(220, 53, 69, 0.7)',  // Recusada
+                            'rgba(255, 193, 7, 0.7)',  // Sugerido
+                            'rgba(23, 162, 184, 0.7)', // Transferida
+                            'rgba(108, 117, 125, 0.7)',// Realizada
+                            'rgba(255, 99, 132, 0.7)', // Fechado
+                            'rgba(54, 162, 235, 0.7)', // Não se interessou
+                            'rgba(255, 206, 86, 0.7)', // Remarcou
+                            'rgba(75, 192, 192, 0.7)'  // Negociando
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    }
+                }
+            });
+        }
     },
 
     showStatInfo(stat) {
-        // Mostrar modal com informações detalhadas da estatística
         const modal = DOM.modalDashInfo;
         if (modal) {
             const content = modal.querySelector('#dashInfoContent');
@@ -1315,19 +1566,19 @@ const DashboardManager = {
                 let title = '';
 
                 if (stat === 'Fechado') {
-                    // Mostrar reuniões fechadas + contas próprias
+                    // Mostrar reuniões com status_pos_reuniao 'Fechado' e contas próprias
                     filteredMeetings = AppState.meetings.filter(m => 
                         m.status_pos_reuniao === STATUS_POS_REUNIAO.FECHADO
-                    );
+                    ).concat(AppState.contasProprias);
                     title = 'Contas Fechadas';
                 } else if (stat === 'ValorAdesao') {
-                    // Mostrar todas as reuniões com valor de adesão
+                    // Mostrar todas as reuniões com valor de adesão (incluindo contas próprias)
                     filteredMeetings = AppState.meetings.filter(m => 
                         m.valor_adesao && parseFloat(m.valor_adesao) > 0
-                    );
+                    ).concat(AppState.contasProprias.filter(c => c.valor_adesao && parseFloat(c.valor_adesao) > 0));
                     title = 'Reuniões com Valor de Adesão';
                 } else {
-                    // Filtrar por status
+                    // Filtrar por status_reuniao
                     filteredMeetings = AppState.meetings.filter(m => 
                         m.status_reuniao === stat
                     );
@@ -1348,26 +1599,12 @@ const DashboardManager = {
                                     <div class="meeting-detail-info">
                                         <span>Consultor: ${meeting.consultor}</span>
                                         <span>Contato: ${meeting.contato}</span>
+                                        ${meeting.status_pos_reuniao ? `<span>Status Pós-Reunião: ${meeting.status_pos_reuniao}</span>` : ''}
                                         ${meeting.valor_adesao ? `<span>Valor: ${Utils.formatCurrency(meeting.valor_adesao)}</span>` : ''}
                                     </div>
                                 </div>
                             `).join('')
                         }
-                        ${stat === 'Fechado' && AppState.contasProprias.length > 0 ? `
-                            <h5 style="margin-top: 20px;">Contas Próprias</h5>
-                            ${AppState.contasProprias.map(conta => `
-                                <div class="meeting-detail-item">
-                                    <div class="meeting-detail-header">
-                                        <h5>${conta.empresa}</h5>
-                                        <span class="meeting-detail-date">${Utils.formatDateBR(conta.data_reuniao)}</span>
-                                    </div>
-                                    <div class="meeting-detail-info">
-                                        <span>Consultor: ${conta.consultor}</span>
-                                        <span>Valor: ${Utils.formatCurrency(conta.valor_adesao || conta.valor)}</span>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        ` : ''}
                     </div>
                 `;
             }
@@ -1491,7 +1728,15 @@ function setupModalEventListeners() {
         'btnCancelarSugestao',
         'btnCancelarTransferencia', 
         'btnCancelarStatus',
-        'btnCancelContaPropria'
+        'btnCancelContaPropria',
+        'btnCloseDetalhes',
+        'btnCloseAcoes',
+        'btnCloseSugerir',
+        'btnCloseGerenciar',
+        'btnCloseTransferir',
+        'btnCloseStatusReuniao',
+        'btnCloseContaPropria',
+        'btnCloseDashInfo'
     ];
 
     cancelButtons.forEach(btnId => {
