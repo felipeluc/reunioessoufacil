@@ -15,8 +15,8 @@ const USERS = {
         'marcelo@soufacil.com': 'Marcelo',
         'gabriel@soufacil.com': 'Gabriel'
     },
-    ADMIN: 'felipesoufacil@gmail.com',
-    GERENTES: ['felipesoufacil@gmail.com', 'carol@soufacil.com']
+    ADMIN: 'felipe@soufacil.com',
+    GERENTES: ['felipe@soufacil.com', 'carol@soufacil.com']
 };
 
 // Status possíveis das reuniões
@@ -221,7 +221,7 @@ const Auth = {
             AppState.tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CONFIG.CLIENT_ID,
                 scope: "https://www.googleapis.com/auth/spreadsheets openid email profile",
-                callback: Auth.handleAuthCallback,
+                callback: Auth.handleAuthCallback.bind(Auth),
             });
 
             console.log('Sistema de autenticação Google inicializado');
